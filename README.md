@@ -2,7 +2,9 @@
 
 Upper-body firmware for the OpenAMRobot mobile manipulator: microcontroller code for the lift and end-effector mounted on the mobile base.
 
-**Status:** planned. Populated next cycle, after the lift mechanical and electrical concept is set.
+> **Status:** Planned, no code yet
+
+Populated next cycle, after the lift mechanical and electrical concept is set. This repository currently holds only this README.
 
 ## What will live here
 - **Lift controller:** homing, position control, soft and hard travel limits.
