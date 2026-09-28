@@ -1,22 +1,23 @@
 # openamr-upperbody-fw
 
-Upper-body firmware for the OpenAMRobot mobile manipulator: microcontroller code for the lift and end-effector mounted on the mobile base.
+Upper-body firmware scope for OpenAMRobot: any required non-vendor end-effector integration and the future OpenAMRobot 3.0 lift controller.
 
-> **Status:** Planned, no code yet
+> **Status:** Planned; no implementation yet.
 
-Populated next cycle, after the lift mechanical and electrical concept is set. This repository currently holds only this README.
+OpenAMRobot 2.0 uses a fixed mast. Lift-controller implementation and lift requirements belong to OpenAMRobot 3.0. This deferral does not set the schedule for non-lift firmware; any such work needs its own agreed scope and acceptance criteria.
 
-## What will live here
-- **Lift controller:** homing, position control, soft and hard travel limits.
-- **End-effector / gripper controller:** when the end-effector is not a vendor unit.
-- **Upper-body safety I/O:** interlocks for motion at height.
+## Potential non-lift scope
+- **End-effector / gripper controller:** only where the selected device requires custom firmware; use supported vendor integration where available.
+- **Upper-body diagnostic or safety-I/O requirements:** ownership and allocation must be agreed with the base-controller and electrical owners. This README does not introduce a separate safety controller or authorize new safety implementation.
 
-## Interfaces
-- Talks to the mobile base over the defined power and CAN or serial link owned by `openamr-platform-hw` and its firmware bridge.
-- Exposes the lift to ros2_control in `openamr-upperbody-sw`.
+## Communication boundaries
+- OpenArm uses the kit USB-CAN-FD adapters connected to the Jetson; it does not communicate through an assumed upper-body-to-base serial bridge.
+- Base CAN 1 is STM32 ↔ ZLAC8015D, dedicated to traction. Isolated base CAN 2 is STM32 ↔ Daly BMS.
+- Do not attach additional upper-body nodes to either dedicated base bus. Any new device requires an agreed CAN interface and allocation. No RS485 or unspecified serial alternative is provisioned.
+- Central control electronics remain inside the mobile platform; integral electronics stay with their devices.
 
-## This cycle
-Requirements only (lift travel, payload, speed, safety), handed from `openamr-upperbody-sw` to the hardware concept. Firmware development starts next cycle.
+## OpenAMRobot 3.0 lift scope
+Lift requirements include travel, payload, speed and safety requirements. Future lift firmware and its ros2_control integration belong to a separately approved work package coordinated with `openamr-upperbody-sw` and `openamr-upperbody-hw`. No lift controller is part of the OpenAMRobot 2.0 fixed-mast baseline.
 
 Part of the OpenAMRobot ecosystem: https://github.com/openAMRobot
 
