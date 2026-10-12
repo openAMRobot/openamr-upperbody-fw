@@ -26,7 +26,7 @@ The lift is approved in principle for OpenAMRobot 2.0 (P-03 Decision Addendum re
 - Head camera Stereolabs ZED Mini (ZED-121210), pitch 15 to 35 degrees down in 5 degree steps, baseline 25 degrees (`hp15` to `hp35`).
 - Configuration IDs `column`, `base_plate`, `head_pitch` and `base_tilt` replace `mast_id`.
 - Lift control on CAN3 through the CAN-to-lift interface module and the STM32H723ZG base controller, part of 2.0. Its firmware and ros2_control integration are coordinated with `openamr-platform-fw`, `openamr-upperbody-sw` and `openamr-upperbody-hw` under an approved work package; this README authorizes no implementation.
-- Release gates still open: DOLD holding confirmation on E-stop and power loss, supplier CAD, F2S rerun, CAN-to-lift module selection and its CAN message set (Evans).
+- Release gates still open: DOLD holding confirmation on E-stop and power loss, supplier CAD, F2S rerun, CAN-to-lift module selection and its CAN message set (base controller firmware owner, I8 work package).
 
 ## Lift sensing and safety (decision record, issue #9)
 Recorded in [issue #9](https://github.com/openAMRobot/openamr-upperbody-fw/issues/9) (7 October 2026). This README records the decisions; it implements no firmware or safety function.
