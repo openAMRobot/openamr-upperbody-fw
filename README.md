@@ -23,7 +23,7 @@ The lift is approved in principle for OpenAMRobot 2.0 (P-03 Decision Addendum re
 - Arm mount 0.180 m ahead of the lift column axis, y +/-0.031 m, rpy 0, shoulder spacing 307 mm, 0.166 m above the column top plate.
 - Column axis x +0.060 m from `base_link` at `bp000` (330 mm behind the chassis front edge) and x +0.110 m at `bp050`.
 - Lift base plate centre or +50 mm (`bp000`, `bp050`); lift stops `L1000`, `L1175`, `L1350`.
-- Head camera Stereolabs ZED Mini (ZED-121210), pitch 15 to 35 degrees down in 5 degree steps, baseline 25 degrees (`hp15` to `hp35`).
+- Head camera Stereolabs ZED Mini (ZED-121210), pitch 15 to 35 degrees down in 5 degree steps, baseline 30 degrees (`hp15` to `hp35`, baseline `hp30`); lens 0.042 m ahead of and 0.223 m above the arm mount point.
 - Configuration IDs `column`, `base_plate`, `head_pitch` and `base_tilt` replace `mast_id`.
 - Lift control on CAN3 through the CAN-to-lift interface module and the STM32H723ZG base controller, part of 2.0. Its firmware and ros2_control integration are coordinated with `openamr-platform-fw`, `openamr-upperbody-sw` and `openamr-upperbody-hw` under an approved work package; this README authorizes no implementation.
 - Release gates still open: DOLD holding confirmation on E-stop and power loss, supplier CAD, F2S rerun, CAN-to-lift module selection and its CAN message set (base controller firmware owner, I8 work package).
