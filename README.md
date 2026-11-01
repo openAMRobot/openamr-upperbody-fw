@@ -4,7 +4,7 @@ Upper-body firmware scope for OpenAMRobot: any required non-vendor end-effector 
 
 > **Status:** Planned; no implementation yet.
 
-The lift is approved in principle for OpenAMRobot 2.0 (P-03 Decision Addendum revision 19.0). Lift control is part of 2.0. The STM32H723ZG base controller (NUCLEO-H723ZG) commands the lift through a small CAN-to-lift interface module, an MCU or ready-made module acting as a CAN node on CAN3, through the generic actuator interface of the firmware core. Non-lift firmware in this repository needs its own agreed scope and acceptance criteria.
+The lift is approved in principle for OpenAMRobot 2.0 (P-03 Decision Addendum revision 19.0; DOLD confirmation and release gates per revision 20.2 item 26). Lift control is part of 2.0. The STM32H723ZG base controller (NUCLEO-H723ZG) commands the lift through the lift node CTL-017, an MCU and H-bridge acting as a CAN node on CAN3 (P-03 revision 20.2 item 24), through the generic actuator interface of the firmware core. Non-lift firmware in this repository needs its own agreed scope and acceptance criteria.
 
 ## Potential non-lift scope
 - **End-effector / gripper controller:** only where the selected device requires custom firmware; use supported vendor integration where available.
@@ -13,26 +13,27 @@ The lift is approved in principle for OpenAMRobot 2.0 (P-03 Decision Addendum re
 ## Communication boundaries
 - OpenArm uses the kit USB-CAN-FD adapters connected to the Jetson; it does not communicate through an assumed upper-body-to-base serial bridge.
 - Base CAN 1 is STM32 ↔ ZLAC8015D, dedicated to traction. Isolated base CAN 2 is STM32 ↔ Daly BMS.
-- Base CAN 3 (FDCAN3) is reserved for upper-body auxiliary actuators, CANopen, no safety function; the lift interface module is its first node. Lift power runs through the hardwired safety chain.
+- Base CAN 3 (FDCAN3) is reserved for upper-body auxiliary actuators, CANopen, no safety function; the lift node CTL-017 is its first node. Lift power runs through the hardwired safety chain.
 - Do not attach additional upper-body nodes to base CAN 1 or CAN 2. Any new device requires an agreed CAN interface and allocation. No RS485 or unspecified serial alternative is provisioned.
 - Central control electronics remain inside the mobile platform; integral electronics stay with their devices.
 
 ## OpenAMRobot 2.0 lift baseline (approved in principle)
-- Lift column: DOLD Hexalift V4 350 mm primary, order code BS-HM240G350530-MFF24: 530 mm retracted, 880 mm extended, 11.7 kg catalogue mass, 24 V DC, two Hall sensors and two end switches. TiMOTION TL3 400 mm fallback.
+- Lift column: DOLD Hexalift V4 350 mm primary, order code BS-HM240G350530-MFF24: 530 mm retracted, 880 mm extended, 11.7 kg catalogue mass, 24 V DC, 800 N push, 18 mm/s, two Hall sensors and two end switches, mounted with its 240 mm side fore-aft. TiMOTION TL3 400 mm fallback.
 - Shoulder height 1000 to 1350 mm, measured at the OpenArm arm mount point (`openarm_{side}_base_link`); the upstream OpenArm body is not used.
 - Arm mount 0.180 m ahead of the lift column axis, y +/-0.031 m, rpy 0, shoulder spacing 307 mm, 0.166 m above the column top plate.
 - Column axis x +0.060 m from `base_link` at `bp000` (330 mm behind the chassis front edge) and x +0.110 m at `bp050`.
 - Lift base plate centre or +50 mm (`bp000`, `bp050`); lift stops `L1000`, `L1175`, `L1350`.
-- Head camera Stereolabs ZED Mini (ZED-121210), pitch 15 to 35 degrees down in 5 degree steps, baseline 25 degrees (`hp15` to `hp35`).
+- Head camera Stereolabs ZED Mini (ZED-121210), pitch 15 to 35 degrees down in 5 degree steps, baseline 30 degrees (`hp15` to `hp35`, baseline `hp30`); lens 0.042 m ahead of and 0.223 m above the arm mount point.
 - Configuration IDs `column`, `base_plate`, `head_pitch` and `base_tilt` replace `mast_id`.
-- Lift control on CAN3 through the CAN-to-lift interface module and the STM32H723ZG base controller, part of 2.0. Its firmware and ros2_control integration are coordinated with `openamr-platform-fw`, `openamr-upperbody-sw` and `openamr-upperbody-hw` under an approved work package; this README authorizes no implementation.
-- Release gates still open: DOLD holding confirmation on E-stop and power loss, supplier CAD, F2S rerun, CAN-to-lift module selection and its CAN message set (base controller firmware owner, I8 work package).
+- Lift control on CAN3 through the lift node CTL-017 and the STM32H723ZG base controller, part of 2.0. Its firmware and ros2_control integration are coordinated with `openamr-platform-fw`, `openamr-upperbody-sw` and `openamr-upperbody-hw` under an approved work package; this README authorizes no implementation.
+- Release gates still open: the holding test on the delivered unit after an E-stop during motion and after power loss (DOLD written confirmation of 800 N held with power off received 14 Oct 2026), supplier CAD, weighed mass, the CAN3 lift interface (lift node CTL-017) and its CAN message set (base controller firmware owner, I8 work package), and the F2S rerun.
 
 ## Lift sensing and safety (decision record, issue #9)
 Recorded in [issue #9](https://github.com/openAMRobot/openamr-upperbody-fw/issues/9) (7 October 2026). This README records the decisions; it implements no firmware or safety function.
-- The CAN-to-lift interface module drives the motor stage and reads the Hall pulses and both end switches.
+- The lift node CTL-017 drives the motor stage and reads the Hall pulses and both end switches.
 - Lift position comes from the Hall count, referenced to an end switch.
-- The module publishes lift position, validity and age. A stale lift state makes the head-camera transform invalid.
+- P-03 revision 20.2 item 24 adds three SICK IME12-04BNSZC0S stop sensors at z 120, 295 and 470 mm on the static profile (`L1000`, `L1175`, `L1350`) with a steel flag; their role relative to the Hall count is to be confirmed by the owner.
+- The lift node publishes lift position, validity and age. A stale lift state makes the head-camera transform invalid.
 - On E-stop, lift power is removed through the hardwired safety chain. The lift holds position with no uncontrolled descent, and its position survives without re-homing.
 - The E-stop safe-park procedure includes the lift retracted.
 - Lift motion only with the base stopped and the arms in the stowed or carry safe pose.
