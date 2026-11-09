@@ -22,4 +22,5 @@ add_subdirectory(firmware/ctl017)
 
 enable_testing()
 add_subdirectory(tests/ctl017)
+add_subdirectory(tools/ctl017_sim)
 add_subdirectory(tools/ctl017_od)
