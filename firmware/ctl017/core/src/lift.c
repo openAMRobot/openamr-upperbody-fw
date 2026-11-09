@@ -379,6 +379,21 @@ uint8_t lift_command(lift_t *l, uint8_t seq, uint8_t op, uint8_t stop_id, uint32
     return res;
 }
 
+void lift_halt(lift_t *l)
+{
+    (void)cmd_stop(l);
+    apply_hbridge(l);
+}
+
+void lift_config_changed(lift_t *l)
+{
+    for (unsigned k = 0; k < LIFT_NUM_STOPS; k++) {
+        l->stop_db[k].hold_ms = l->cfg.sensor_debounce_ms;
+    }
+    l->lower_db.hold_ms = l->cfg.sensor_debounce_ms;
+    l->upper_db.hold_ms = l->cfg.sensor_debounce_ms;
+}
+
 void lift_set_supervision_lost(lift_t *l, bool lost)
 {
     l->supervision_lost = lost;

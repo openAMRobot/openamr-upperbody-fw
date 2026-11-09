@@ -215,6 +215,14 @@ const lift_hbridge_cmd_t *lift_step(lift_t *l, const lift_inputs_t *in);
  * deadline and is not executed again. Returns the resulting cmd_result. */
 uint8_t lift_command(lift_t *l, uint8_t seq, uint8_t op, uint8_t stop_id, uint32_t now_ms);
 
+/* Internal stop (NMT left OPERATIONAL, node reset request): same effect as
+ * an accepted STOP, without touching last_seq or cmd_result. */
+void lift_halt(lift_t *l);
+
+/* Re-applies the configuration after a parameter change (debounce times).
+ * The caller must have checked lift_config_valid(). */
+void lift_config_changed(lift_t *l);
+
 /* The core heartbeat (heartbeat consumer) was lost or came back. While lost,
  * any move or homing stops with F07 and new moves are refused. */
 void lift_set_supervision_lost(lift_t *l, bool lost);

@@ -13,3 +13,4 @@ function(ctl017_test name)
 endfunction()
 
 ctl017_test(test_lift ctl017_core ctl017_plant)
+ctl017_test(test_canopen ctl017_app ctl017_plant)
