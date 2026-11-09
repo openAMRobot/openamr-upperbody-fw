@@ -71,6 +71,11 @@ typedef enum {
     LIFT_RES_MALFORMED = 9,
     LIFT_RES_SEQ_CONFLICT = 10,
     LIFT_RES_MOTOR_POWER_ABSENT = 11,
+    /* Proposal, not in the D11 list, TODO(Evans) to confirm the code:
+     * MOVE_TO_STOP or START_HOMING refused because the core heartbeat (0x701)
+     * is not fresh (never received since start-up, timed out, or the
+     * consumer is disabled). Decision D12 alternative (a). */
+    LIFT_RES_CORE_HEARTBEAT_STALE = 12,
     LIFT_RES_NONE = 0xFF, /* no command since start-up */
 } lift_result_t;
 
@@ -178,7 +183,7 @@ typedef struct {
     uint8_t last_stop_id;
     uint8_t cmd_result;
     uint32_t last_keepalive_ms;
-    bool supervision_lost;        /* core heartbeat lost (heartbeat consumer) */
+    bool supervision_lost;        /* core heartbeat not fresh; true from lift_init() */
 
     uint32_t init_ms;
     uint32_t now_ms;
@@ -223,8 +228,12 @@ void lift_halt(lift_t *l);
  * The caller must have checked lift_config_valid(). */
 void lift_config_changed(lift_t *l);
 
-/* The core heartbeat (heartbeat consumer) was lost or came back. While lost,
- * any move or homing stops with F07 and new moves are refused. */
+/* Freshness of the core heartbeat (heartbeat consumer, D12 alternative a).
+ * lost = true: never received since start-up, timed out or not monitored.
+ * lift_init() starts with lost = true, so nothing moves until the transport
+ * layer reports a fresh heartbeat. While lost, a move or homing in progress
+ * stops with F07, and MOVE_TO_STOP and START_HOMING are refused with
+ * LIFT_RES_CORE_HEARTBEAT_STALE. STOP and CLEAR_FAULT are always processed. */
 void lift_set_supervision_lost(lift_t *l, bool lost);
 
 /* True while the motor is driven or the column is not yet at standstill

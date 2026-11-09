@@ -223,3 +223,26 @@ def test_second_estop_reported(node):
     m.send(SIM_CTRL, [6, 1])
     d = m.wait_for(TPDO2_ID, lambda d: LiftStatus2.decode(d).inputs & 0x08, 1.0)
     assert d is not None
+
+
+def test_move_refused_without_core_heartbeat(node):
+    """D12 alternative (a): no core heartbeat 0x701, MOVE_TO_STOP refused with
+    cmd_result 12 and no motion; accepted once the heartbeat is back."""
+    m, _ = node
+    m.heartbeat = False
+    time.sleep(0.5)  # consumer times out (300 ms)
+    m.send(0x000, [0x01, 0x10])
+    time.sleep(0.1)
+    m.command(7, 1, 2)
+    d = m.wait_for(TPDO1_ID, lambda d: LiftStatus.decode(d).last_seq == 7, 1.0)
+    assert d is not None and LiftStatus.decode(d).cmd_result == 12
+    time.sleep(0.4)
+    st = LiftStatus.decode(m.latest(TPDO1_ID))
+    assert st.state == 3 and not st.flags & 0x04  # IDLE, not moving
+    m.keepalive = None
+    m.heartbeat = True
+    time.sleep(0.3)
+    m.command(8, 1, 2)
+    d = m.wait_for(TPDO1_ID, lambda d: LiftStatus.decode(d).last_seq == 8, 1.0)
+    assert d is not None and LiftStatus.decode(d).cmd_result == 0
+    m.command(9, 0, 0)

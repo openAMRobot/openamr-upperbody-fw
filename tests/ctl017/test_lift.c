@@ -103,6 +103,7 @@ static void fx_init_cfg(fx_t *f, int64_t start_nm, const lift_config_t *cfg)
     f->now = 1000;
     plant_init(&f->plant, start_nm);
     lift_init(&f->lift, &f->cfg, f->now);
+    lift_set_supervision_lost(&f->lift, false); /* core heartbeat fresh */
     fx_run(f, 200); /* settle: INIT done and standstill confirmed */
 }
 
@@ -564,6 +565,7 @@ static void test_two_sensors_at_boot_f09(void)
     plant_init(&f.plant, MM(5));
     f.plant.sensor_stuck_on[1] = true;
     lift_init(&f.lift, &f.cfg, f.now);
+    lift_set_supervision_lost(&f.lift, false);
     fx_run(&f, 200);
     CHECK(f.lift.faults & LIFT_FAULT_F09_STOP_SENSORS);
     CHECK(!f.lift.position_valid);
@@ -784,6 +786,7 @@ static void test_counter_wrap(void)
     f.plant.count_offset = INT32_MAX - 300; /* wraps during the move up */
     f.plant.hall_count_frozen_value = (int32_t)((uint32_t)f.plant.hall_count_frozen_value + (uint32_t)f.plant.count_offset);
     lift_init(&f.lift, &f.cfg, f.now);
+    lift_set_supervision_lost(&f.lift, false);
     fx_run(&f, 200);
     CHECK_EQ(f.lift.state, LIFT_STATE_IDLE);
     CHECK_EQ(fx_cmd(&f, LIFT_OP_MOVE_TO_STOP, 2), LIFT_RES_ACCEPTED);
@@ -791,6 +794,54 @@ static void test_counter_wrap(void)
     CHECK_EQ(f.lift.faults, 0);
     CHECK_EQ(fx_status(&f).active_stop_id, 2);
     CHECK(abs64(lift_position_nm(&f.lift) - f.plant.pos_nm) <= MM(1));
+}
+
+/* D12 alternative (a), refusal side: while the core heartbeat is not fresh,
+ * MOVE_TO_STOP and START_HOMING are refused with code 12 and the H-bridge
+ * stays off; STOP and CLEAR_FAULT are still processed. Freshness returns
+ * with the heartbeat, and only a new command moves the column. */
+static void test_move_refused_while_core_heartbeat_stale(void)
+{
+    fx_t f;
+    fx_init(&f, MM(5));
+    lift_set_supervision_lost(&f.lift, true);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_MOVE_TO_STOP, 2), LIFT_RES_CORE_HEARTBEAT_STALE);
+    f.keepalive = true;
+    fx_run(&f, 500);
+    CHECK(!f.hb->enable);
+    CHECK_EQ(f.lift.state, LIFT_STATE_IDLE);
+    CHECK_EQ(f.lift.faults, 0);
+    CHECK_EQ(fx_status(&f).target_stop_id, LIFT_STOP_NONE);
+    CHECK_EQ(fx_status(&f).cmd_result, LIFT_RES_CORE_HEARTBEAT_STALE);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_START_HOMING, 0), LIFT_RES_CORE_HEARTBEAT_STALE);
+    fx_run(&f, 200);
+    CHECK(!f.hb->enable);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_STOP, 0), LIFT_RES_ACCEPTED);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_CLEAR_FAULT, 0), LIFT_RES_ACCEPTED);
+    /* Heartbeat fresh again: nothing moves on its own. */
+    lift_set_supervision_lost(&f.lift, false);
+    fx_run(&f, 300);
+    CHECK(!f.hb->enable);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_MOVE_TO_STOP, 2), LIFT_RES_ACCEPTED);
+    fx_run(&f, 50);
+    CHECK(f.hb->enable);
+}
+
+/* A freshly initialised core treats the core heartbeat as not yet seen. */
+static void test_core_heartbeat_stale_from_start(void)
+{
+    fx_t f;
+    memset(&f, 0, sizeof(f));
+    fx_cfg(&f.cfg);
+    f.now = 1000;
+    plant_init(&f.plant, MM(5));
+    lift_init(&f.lift, &f.cfg, f.now);
+    CHECK(f.lift.supervision_lost);
+    fx_run(&f, 200);
+    CHECK_EQ(f.lift.state, LIFT_STATE_IDLE);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_MOVE_TO_STOP, 1), LIFT_RES_CORE_HEARTBEAT_STALE);
+    fx_run(&f, 200);
+    CHECK(!f.hb->enable);
 }
 
 int main(void)
@@ -834,5 +885,7 @@ int main(void)
     RUN(test_commands_during_init);
     RUN(test_brake_mode);
     RUN(test_counter_wrap);
+    RUN(test_move_refused_while_core_heartbeat_stale);
+    RUN(test_core_heartbeat_stale_from_start);
     TEST_MAIN_END();
 }

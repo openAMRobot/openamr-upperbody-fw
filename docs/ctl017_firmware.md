@@ -39,6 +39,7 @@ Readiness and command rules follow S2 sections 5.3 and 6 with the D1 to D20 chan
 | Check | Rule | Fault |
 |---|---|---|
 | Command supervision | no keep-alive (same RPDO1 again) or no core heartbeat for 300 ms (D12 alternative a, D15) | F07 |
+| Core heartbeat at command time | MOVE_TO_STOP and START_HOMING are refused with cmd_result 12 unless the core heartbeat 0x701 is fresh: received since start-up and within the 300 ms consumer time, with the consumer enabled (D12 alternative a). STOP and CLEAR_FAULT are always processed | none (refusal) |
 | Travel timeout | per move: distance / expected speed x factor + margin; homing uses the full stop-0-to-stop-2 travel plus margins (P-03 item 30 A7) | F04 |
 | Hall window | after a start grace, the count rate over each window must sit inside the min and max for the move or homing duty (P-03 item 30 A7; Alex 24 Oct: implausible rate gives F02) | F02 |
 | Stall | no Hall pulse for the stall time while driving (Alex 24 Oct) | F03 |

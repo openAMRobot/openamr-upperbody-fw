@@ -44,10 +44,20 @@ static void cb_tpdo_sent(void *ctx, uint8_t n)
     }
 }
 
+/* D12 alternative (a): the core heartbeat counts as fresh only while the
+ * consumer is ACTIVE (received within 0x1016:01). WAITING (none since
+ * start-up or since reset communication), LOST and OFF (consumer disabled by
+ * SDO) are stale: the lift refuses new moves and stops a move in progress. */
+static void sync_supervision(ctl017_app_t *a)
+{
+    lift_set_supervision_lost(&a->lift, a->co.hbc != CO_HBC_ACTIVE);
+}
+
 static void cb_rpdo(void *ctx, uint8_t n, uint32_t now_ms)
 {
     ctl017_app_t *a = ctx_app(ctx);
     if (n == 0u) {
+        sync_supervision(a);
         (void)lift_command(&a->lift, a->cmd.seq, a->cmd.op, a->cmd.stop_id, now_ms);
     } else {
         uint8_t dim = a->auxcmd.head_light_dim_pct > 100u ? 100u : a->auxcmd.head_light_dim_pct;
@@ -75,7 +85,7 @@ static void cb_reset_node(void *ctx)
 static void cb_hb_consumer(void *ctx, bool lost)
 {
     ctl017_app_t *a = ctx_app(ctx);
-    lift_set_supervision_lost(&a->lift, lost);
+    sync_supervision(a);
     if (lost) {
         aux_comm_lost(&a->aux);
     }
@@ -165,6 +175,7 @@ const ctl017_outputs_t *ctl017_app_step(ctl017_app_t *a, const lift_inputs_t *li
 {
     a->now_ms = lin->now_ms;
     a->hall_count_raw = lin->hall_count;
+    sync_supervision(a);
     const lift_hbridge_cmd_t *hb = lift_step(&a->lift, lin);
     const aux_outputs_t *ao = aux_step(&a->aux, ain);
     emit_emcy(a);
