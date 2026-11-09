@@ -14,3 +14,6 @@ endfunction()
 
 ctl017_test(test_lift ctl017_core ctl017_plant)
 ctl017_test(test_canopen ctl017_app ctl017_plant)
+ctl017_test(test_drive_gate ctl017_core ctl017_plant)
+# The board drive configuration is HAL-free so the skeleton gate is tested here.
+target_include_directories(test_drive_gate PRIVATE ${PROJECT_SOURCE_DIR}/boards/nucleo_g474re)

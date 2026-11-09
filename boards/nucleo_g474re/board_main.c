@@ -11,6 +11,7 @@
  */
 #include <string.h>
 
+#include "board_drive_config.h"
 #include "board_pins.h"
 #include "ctl017/ctl017_app.h"
 #include "stm32g4xx_hal.h"
@@ -36,6 +37,11 @@ static const board_pin_t pin_in_b = BOARD_HB_IN_B;
 static const board_pin_t pin_inh_a = BOARD_HB_INH_A;
 static const board_pin_t pin_inh_b = BOARD_HB_INH_B;
 static const board_pin_t pin_led = BOARD_LED;
+static drive_gate_t drive_gate; /* closed unless every item is set, board_drive_config.h */
+
+#if BOARD_HB_PWM_IMPLEMENTED
+#error "Write the IN PWM path in hbridge_apply() before setting BOARD_HB_PWM_IMPLEMENTED"
+#endif
 
 void Error_Handler(void);
 
@@ -391,34 +397,35 @@ static uint8_t read_reset_cause(void)
 /* ---- H-bridge ------------------------------------------------------------- */
 /* IFX007T: INH high enables a half-bridge, IN selects high or low side.
  * Direction by polarity on DOLD pins 1 and 8 (DOLD interface data).
- * TODO(Evans): PWM on IN through a timer channel. Until a PWM channel is
- * assigned, a duty below 1000 permille is not applied (no drive), so a
- * reduced-speed command never runs at full speed by mistake. */
+ * The pin levels come from ifx007t_levels() behind the drive gate: with the
+ * gate closed (the skeleton default) all four pins stay low, so both
+ * half-bridges are high impedance whatever the core commands.
+ * TODO(Evans): PWM on IN through a timer channel; ifx007t_levels() gives the
+ * direction, the duty must then be applied on the active IN pin. */
+static bool hb_pins_assigned(void)
+{
+    return pin_in_a.port != NULL && pin_in_b.port != NULL && pin_inh_a.port != NULL &&
+           pin_inh_b.port != NULL;
+}
+
 static void hbridge_apply(const lift_hbridge_cmd_t *hb)
 {
-    bool full = hb->duty_permille >= 1000u;
-    if (!hb->enable || (!hb->brake && !full)) {
-        pin_write(&pin_inh_a, false);
+    ifx007t_levels_t lv = ifx007t_levels(&drive_gate, hb);
+    if (!lv.inh_a || !lv.inh_b) {
+        pin_write(&pin_inh_a, false); /* inhibit first */
         pin_write(&pin_inh_b, false);
-        pin_write(&pin_in_a, false);
-        pin_write(&pin_in_b, false);
-        return;
     }
-    if (hb->brake) {
-        pin_write(&pin_in_a, false); /* both low sides on */
-        pin_write(&pin_in_b, false);
-    } else {
-        pin_write(&pin_in_a, hb->dir == LIFT_DIR_UP);
-        pin_write(&pin_in_b, hb->dir == LIFT_DIR_DOWN);
-    }
-    pin_write(&pin_inh_a, true);
-    pin_write(&pin_inh_b, true);
+    pin_write(&pin_in_a, lv.in_a);
+    pin_write(&pin_in_b, lv.in_b);
+    pin_write(&pin_inh_a, lv.inh_a);
+    pin_write(&pin_inh_b, lv.inh_b);
 }
 
 /* ---- Main loop --------------------------------------------------------------- */
 int main(void)
 {
     HAL_Init();
+    drive_gate = board_drive_gate(hb_pins_assigned());
     clock_config();
     gpio_init();
     uint8_t reset_cause = read_reset_cause();
