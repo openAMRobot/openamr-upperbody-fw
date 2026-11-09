@@ -25,7 +25,7 @@ Open, `BOARD_PIN_NONE` in `board_pins.h` until the owner assigns them (TODO(Evan
 | Stop sensors L1000, L1175, L1350 | NPN NO, 4.7 kOhm pull-up to 24 V, 27k/3.3k divider, clamp and TVS: pin LOW = target present (`BOARD_STOP_ACTIVE_LOW`) |
 | DOLD end switches | only if wired out; DOLD data open |
 | Motor-supply sense | divider from the switched lift feed, threshold about 18 V (Anushka 27 Oct) |
-| Hall-supply monitor | power-good or ADC (Alex 27 Oct) |
+| Hall-supply monitor | power-good or ADC (CAN3 v1, platform-fw #12) |
 | Second E-stop spare NO | diagnostics only |
 | Spare inputs 1 to 3 | functional only |
 | Head light low-side PWM | Falcon FLDL-i150x15-W, 24 V, 0.32 A; switch LED-, output rated at least 1 A |

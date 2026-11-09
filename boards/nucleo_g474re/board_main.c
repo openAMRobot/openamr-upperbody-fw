@@ -390,7 +390,7 @@ static uint8_t read_reset_cause(void)
 
 /* ---- H-bridge ------------------------------------------------------------- */
 /* IFX007T: INH high enables a half-bridge, IN selects high or low side.
- * Direction by polarity on DOLD pins 1 and 8 (DOLD, relayed 5 Nov).
+ * Direction by polarity on DOLD pins 1 and 8 (DOLD interface data).
  * TODO(Evans): PWM on IN through a timer channel. Until a PWM channel is
  * assigned, a duty below 1000 permille is not applied (no drive), so a
  * reduced-speed command never runs at full speed by mistake. */

@@ -48,13 +48,13 @@ Readiness and command rules follow S2 sections 5.3 and 6 with the D1 to D20 chan
 | Missing target sensor | Hall position passes the target by more than the overrun limit without its sensor | F02 |
 | End switch | end switch reached in the direction of travel (stops sit 5 mm inside the switches) | F02 |
 | Two stop sensors | two or more active at any time (P-03 item 24) | F09 (proposal) |
-| Standstill | not confirmed within the standstill timeout after the drive is switched off (Alex 27 Oct, start 500 ms) | F08 |
+| Standstill | not confirmed within the standstill timeout after the drive is switched off (CAN3 v1 decision, platform-fw #12; start 500 ms) | F08 |
 | Hall supply | lost while moving: F05; at standstill: position invalid, no fault (Alex 24 Oct) | F05 |
 | Motor power | lost while moving: stop, keep counting, no fault (D4, D13); a new move is refused with cmd_result 11 | none |
 
 Stop-sensor priority: a move ends only when the target stop's sensor is active and the Hall position has reached the stop; the sensor confirms the stop, the Hall count places the lift inside the sensor band and cross-checks the sensor. An open sensor wire reads as "no target", so the overrun limit and the travel timeout stop the lift.
 
-Homing: START_HOMING drives down at the homing duty. The first stop sensor reached sets the reference (P-03 item 24: "between stops the node moves slowly to the nearest sensor"). With `homing_continue_to_stop0` (default, work package: "homing to L1000") homing continues to L1000 and cross-checks each sensor on the way (D10: home down). A sensor active at power-up gives a valid position without homing.
+Homing: START_HOMING drives down at the homing duty. The first stop sensor reached sets the reference (P-03 item 24: "between stops the node moves slowly to the nearest sensor"). With `homing_continue_to_stop0` (default, CTL-017 v1 task: "homing to L1000") homing continues to L1000 and cross-checks each sensor on the way (D10: home down). A sensor active at power-up gives a valid position without homing.
 
 ## 4. CANopen: own implementation instead of CANopenNode
 

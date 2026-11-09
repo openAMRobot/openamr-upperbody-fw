@@ -38,7 +38,7 @@ typedef enum {
     LIFT_STATE_FAULT = 6,
 } lift_state_t;
 
-/* LiftStatus.flags (after Alex 27 Oct: bit 6 motor_power_present replaces
+/* LiftStatus.flags (CAN3 v1 decision, platform-fw #12: bit 6 motor_power_present replaces
  * homed, bit 7 recovery_required = not homed). */
 #define LIFT_FLAG_POSITION_VALID      (1u << 0)
 #define LIFT_FLAG_AT_STOP             (1u << 1)

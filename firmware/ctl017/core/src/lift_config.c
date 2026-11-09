@@ -53,11 +53,11 @@ void lift_config_default(lift_config_t *cfg)
     cfg->end_switches_wired = false;       /* TODO(Evans) */
 
     cfg->standstill_quiet_ms = 100;        /* TODO(Evans) */
-    cfg->standstill_timeout_ms = 500;      /* F08 start value, Alex 27 Oct */
+    cfg->standstill_timeout_ms = 500;      /* F08 start value, CAN3 v1 decision */
 
     cfg->rpdo_deadline_ms = 300;           /* D15 */
 
-    cfg->homing_continue_to_stop0 = true;  /* D10 home down; work package: to L1000 */
+    cfg->homing_continue_to_stop0 = true;  /* D10 home down; v1 task: to L1000 */
 
     cfg->init_settle_ms = 50;              /* TODO(Evans) */
 }

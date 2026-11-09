@@ -33,12 +33,12 @@ typedef struct {
 
     /* --- Stops (positions above the lower end of travel, micrometres) ----- */
     /* TODO(Evans): calibrate. Defaults: stop 0 sits 5 mm inside the lower
-     * switch and the stops are 175 mm apart (Alex 27 Oct; P-03 item 24).
+     * switch and the stops are 175 mm apart (CAN3 v1 decision, platform-fw #12; P-03 item 24).
      * That implies a 360 mm switch-to-switch travel against the 350 mm
      * catalogue stroke: stroke check is open. */
     int32_t stop_pos_um[LIFT_NUM_STOPS];
     /* at_stop tolerance: plus or minus 2 mm for every stop (decision D3,
-     * Alex 27 Oct). */
+     * CAN3 v1 decision, platform-fw #12). */
     int32_t stop_tol_um;
     /* Hall cross-check window when a stop sensor switches on (F02).
      * TODO(Evans): D10 uses plus or minus 2 mm for the stroke cross-check;
@@ -116,14 +116,14 @@ typedef struct {
     /* No Hall count change for standstill_quiet_ms means standstill.
      * TODO(Evans): quiet time. F08 is raised if standstill is not confirmed
      * standstill_timeout_ms after the drive was switched off (start value
-     * 500 ms, Alex 27 Oct; final value from the bench). */
+     * 500 ms, CAN3 v1 decision; final value from the bench). */
     uint16_t standstill_quiet_ms;
     uint16_t standstill_timeout_ms;
 
     /* --- Supervision (decisions D12, D15) ----------------------------------- */
     uint16_t rpdo_deadline_ms;    /* 300 ms command keep-alive deadline */
 
-    /* --- Homing (decision D10, work package: home to L1000) ---------------- */
+    /* --- Homing (decision D10; CTL-017 v1 task: home to L1000) ------------- */
     /* Homing drives down. The first stop sensor reached sets the reference.
      * If true, homing then continues to L1000 and cross-checks it. */
     bool homing_continue_to_stop0;

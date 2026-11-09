@@ -49,7 +49,7 @@ Event driven (transmission type 0xFE): sent on any change of bytes 0 to 6, at mo
 | 6 | cmd_result | 0x2000:06 | result of that command (section 6); 0xFF = no command since start-up |
 | 7 | status_counter | 0x2000:07 | +1 on every TPDO1 frame, wraps 255 to 0, restarts at 0 on node start |
 
-Flags (after Alex 27 Oct):
+Flags (CAN3 v1 decision, platform-fw #12: bit 6 motor_power_present replaces homed, bit 7 recovery_required):
 
 | Bit | Flag | Rule in the firmware |
 |---|---|---|
@@ -62,11 +62,11 @@ Flags (after Alex 27 Oct):
 | 6 | motor_power_present | motor-supply sense (functional status, not a safety signal) |
 | 7 | recovery_required | not homed (D9) |
 
-The work package names the states IDLE, MOVING_UP, MOVING_DOWN, AT_STOP, FAULT, HOMING. On the wire they are the S2 states: MOVING_UP and MOVING_DOWN are MOVING with the sign of the TPDO2 velocity, AT_STOP is IDLE with at_stop set.
+The CTL-017 v1 task names the states IDLE, MOVING_UP, MOVING_DOWN, AT_STOP, FAULT, HOMING. On the wire they are the S2 states: MOVING_UP and MOVING_DOWN are MOVING with the sign of the TPDO2 velocity, AT_STOP is IDLE with at_stop set.
 
 ## 4. TPDO2 LiftStatus2 (0x290, 8 bytes)
 
-P-03 item 24 and the 27 Oct decision put the stop sensor states, motor current and target stop in TPDO2. Layout proposal (TODO(Evans) to confirm). Sent on change of bytes 0, 1, 6 or 7 (inhibit 0x1801:03, default 10 ms) and every 0x1801:05 (default 100 ms); current and velocity go out with the event timer only.
+P-03 item 24 and the CAN3 v1 decision put the stop sensor states, motor current and target stop in TPDO2. Layout proposal (TODO(Evans) to confirm). Sent on change of bytes 0, 1, 6 or 7 (inhibit 0x1801:03, default 10 ms) and every 0x1801:05 (default 100 ms); current and velocity go out with the event timer only.
 
 | Byte | Field | Object | Meaning |
 |---|---|---|---|
@@ -120,7 +120,7 @@ RPDO2 has no deadline. On loss of the core heartbeat the outputs hold by default
 
 Check order for MOVE_TO_STOP in the firmware: 1, 3, 5, 6, 2, already at that stop (accepted, no motion), 11, 4. STOP is never rejected. CLEAR_FAULT: 5 while motion is in progress; accepted no-op without a fault (D9); otherwise clears every fault whose condition is gone and answers 7 if any remain. START_HOMING: 3, 5, 8, then 11 and 4 if motion is needed.
 
-Homing (D10, P-03 item 24, work package): if a stop sensor is active, the reference is taken there without motion; otherwise the lift drives down at the homing duty and the first stop sensor reached sets the reference. With 0x2101:30 = 1 (default) homing then continues to L1000 and cross-checks the count at each sensor on the way.
+Homing (D10, P-03 item 24, CTL-017 v1 task): if a stop sensor is active, the reference is taken there without motion; otherwise the lift drives down at the homing duty and the first stop sensor reached sets the reference. With 0x2101:30 = 1 (default) homing then continues to L1000 and cross-checks the count at each sensor on the way.
 
 ## 7. Faults, EMCY and error register
 
