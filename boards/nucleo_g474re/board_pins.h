@@ -81,8 +81,6 @@ typedef struct {
 /* Board LED LD2 (NUCLEO-G474RE): heartbeat blink. */
 #define BOARD_LED         {GPIOA, GPIO_PIN_5}
 
-/* Current sense scale: mA per ADC count. TODO(Evans): IFX007T IS ratio and
- * the sense resistor on the shield. 0 = report 0 mA (current limit inactive). */
-#define BOARD_ISENSE_UA_PER_COUNT 0u
+/* Current sense scale and the drive gate: board_drive_config.h. */
 
 #endif /* CTL017_BOARD_PINS_H */

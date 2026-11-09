@@ -566,6 +566,66 @@ static void test_error_register(void)
     CHECK_EQ(ctl017_error_register(LIFT_FAULT_F02_HALL_MISMATCH), 0x81);
 }
 
+/* D12 alternative (a) at the bus level: MOVE_TO_STOP is refused with
+ * cmd_result 12 while the core heartbeat 0x701 has never been received, after
+ * it timed out, and after the consumer was disabled by SDO. The H-bridge
+ * stays off in every case. */
+static void test_move_refused_without_core_heartbeat(void)
+{
+    setup(MM(5));
+    F.core_hb = false;
+    run(&F, 200);
+    nmt(&F, CO_NMT_CS_START);
+    run(&F, 10);
+    CHECK_EQ(F.app.co.hbc, CO_HBC_WAITING);
+    lift_cmd(&F, 1, LIFT_OP_MOVE_TO_STOP, 2);
+    run(&F, 300);
+    CHECK_EQ(F.app.lift.cmd_result, LIFT_RES_CORE_HEARTBEAT_STALE);
+    CHECK(!F.out->hbridge.enable);
+    CHECK_EQ(F.app.lift.state, LIFT_STATE_IDLE);
+    CHECK_EQ(F.app.st1.cmd_result, LIFT_RES_CORE_HEARTBEAT_STALE);
+    CHECK_EQ(F.app.st1.last_seq, 1);
+
+    /* Heartbeat present: accepted. */
+    F.core_hb = true;
+    F.last_core_hb = F.now - 100;
+    run(&F, 50);
+    CHECK_EQ(F.app.co.hbc, CO_HBC_ACTIVE);
+    lift_cmd(&F, 2, LIFT_OP_MOVE_TO_STOP, 2);
+    run(&F, 20);
+    CHECK_EQ(F.app.lift.cmd_result, LIFT_RES_ACCEPTED);
+    CHECK(F.out->hbridge.enable);
+    lift_cmd(&F, 3, LIFT_OP_STOP, 0);
+    run(&F, 1000);
+    CHECK(!F.out->hbridge.enable);
+
+    /* Heartbeat timed out at rest: refused, no fault raised at rest. */
+    F.core_hb = false;
+    run(&F, 400);
+    CHECK_EQ(F.app.co.hbc, CO_HBC_LOST);
+    lift_cmd(&F, 4, LIFT_OP_MOVE_TO_STOP, 1);
+    run(&F, 300);
+    CHECK_EQ(F.app.lift.cmd_result, LIFT_RES_CORE_HEARTBEAT_STALE);
+    CHECK(!F.out->hbridge.enable);
+
+    /* Heartbeat back, then the consumer disabled by SDO (0x1016:01 = 0):
+     * no supervision means stale, not fresh. */
+    F.core_hb = true;
+    F.last_core_hb = F.now - 100;
+    run(&F, 50);
+    CHECK_EQ(F.app.co.hbc, CO_HBC_ACTIVE);
+    nmt(&F, CO_NMT_CS_PREOP);
+    const co_frame_t *r = sdo_write(&F, 0x1016, 1, 0, 4);
+    CHECK_EQ(r->data[0], 0x60);
+    nmt(&F, CO_NMT_CS_START);
+    run(&F, 10);
+    CHECK_EQ(F.app.co.hbc, CO_HBC_OFF);
+    lift_cmd(&F, 5, LIFT_OP_MOVE_TO_STOP, 2);
+    run(&F, 300);
+    CHECK_EQ(F.app.lift.cmd_result, LIFT_RES_CORE_HEARTBEAT_STALE);
+    CHECK(!F.out->hbridge.enable);
+}
+
 int main(void)
 {
     RUN(test_boot_up_and_preop);
@@ -584,5 +644,6 @@ int main(void)
     RUN(test_aux_outputs);
     RUN(test_mapping_consistency);
     RUN(test_error_register);
+    RUN(test_move_refused_without_core_heartbeat);
     TEST_MAIN_END();
 }

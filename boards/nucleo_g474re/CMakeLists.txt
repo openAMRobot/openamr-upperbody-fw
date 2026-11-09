@@ -37,6 +37,7 @@ add_library(ctl017_fw STATIC
   ${REPO}/firmware/ctl017/core/src/lift_config.c
   ${REPO}/firmware/ctl017/core/src/lift.c
   ${REPO}/firmware/ctl017/core/src/aux_io.c
+  ${REPO}/firmware/ctl017/core/src/drive_gate.c
   ${REPO}/firmware/ctl017/canopen/src/co_node.c
   ${REPO}/firmware/ctl017/app/src/ctl017_app.c
   ${REPO}/firmware/ctl017/app/src/ctl017_od.c

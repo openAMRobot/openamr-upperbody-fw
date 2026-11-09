@@ -163,6 +163,7 @@ void lift_init(lift_t *l, const lift_config_t *cfg, uint32_t now_ms)
     l->last_seq = 0;
     l->init_ms = now_ms;
     l->now_ms = now_ms;
+    l->supervision_lost = true; /* no core heartbeat seen yet */
     for (unsigned k = 0; k < LIFT_NUM_STOPS; k++) {
         debounce_init(&l->stop_db[k], false, cfg->sensor_debounce_ms, now_ms);
     }
@@ -244,6 +245,9 @@ static uint8_t cmd_move(lift_t *l, uint8_t stop_id)
     if (l->state == LIFT_STATE_INIT || lift_motion_in_progress(l)) {
         return LIFT_RES_BUSY;
     }
+    if (l->supervision_lost) {
+        return LIFT_RES_CORE_HEARTBEAT_STALE; /* D12 alternative (a) */
+    }
     if (!l->homed) {
         return LIFT_RES_RECOVERY_REQUIRED;
     }
@@ -302,6 +306,9 @@ static uint8_t cmd_home(lift_t *l)
     }
     if (l->state == LIFT_STATE_INIT || lift_motion_in_progress(l)) {
         return LIFT_RES_BUSY;
+    }
+    if (l->supervision_lost) {
+        return LIFT_RES_CORE_HEARTBEAT_STALE; /* D12 alternative (a) */
     }
     if (both_limits(l) || !l->hall_supply_ok || active_sensor_count(l, NULL) > 1u) {
         return LIFT_RES_HOMING_PRECONDITIONS;

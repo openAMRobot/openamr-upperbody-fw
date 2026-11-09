@@ -7,6 +7,7 @@ add_library(ctl017_core STATIC
   core/src/lift_config.c
   core/src/lift.c
   core/src/aux_io.c
+  core/src/drive_gate.c
 )
 target_include_directories(ctl017_core PUBLIC core/include)
 

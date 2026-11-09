@@ -31,7 +31,7 @@ Sources: the CAN3 lift message set (openamr-platform-fw #12: proposal of 23 Oct 
 - Boot: CTL-017 sends the boot-up message (0x710, data 0x00) and enters PRE-OPERATIONAL. PDOs run only in OPERATIONAL; the base controller starts the node with NMT start (0x01). SDO is served in PRE-OPERATIONAL and OPERATIONAL, not in STOPPED.
 - Leaving OPERATIONAL (NMT stop or pre-operational) halts the lift at once: no RPDO can arrive any more.
 - NMT reset node (0x81) halts the lift and requests a system reset from the board port. Reset communication (0x82) re-sends the boot-up message and returns to PRE-OPERATIONAL.
-- Heartbeat producer 0x1017 = 100 ms. Heartbeat consumer 0x1016:01 = node 0x01, 300 ms (D15). Monitoring starts with the first heartbeat received.
+- Heartbeat producer 0x1017 = 100 ms. Heartbeat consumer 0x1016:01 = node 0x01, 300 ms (D15). Monitoring starts with the first heartbeat received. Until then, and while the heartbeat is timed out or the consumer is disabled, the core heartbeat counts as stale: MOVE_TO_STOP and START_HOMING are refused with cmd_result 12 (D12 alternative a).
 - Command supervision (D12 alternative a): while a move or homing is active, the lift stops and raises F07 if either the command keep-alive or the core heartbeat is missing for 300 ms. The keep-alive is RPDO1 re-sent every 100 ms with the same seq and identical content (S2 section 11). The deadline is 0x1400:05 (RPDO1 event timer, CiA 301 deadline monitoring); it is armed only while a move or homing is active, so an idle base controller does not need to send RPDO1.
 - The base controller watches the CTL-017 heartbeat (node lost after 300 ms) and the TPDO1 status_counter (gap limit 3, resync after 3 frames, D15). Those rules run on the base controller and are listed here for completeness.
 
@@ -116,9 +116,10 @@ RPDO2 has no deadline. On loss of the core heartbeat the outputs hold by default
 | 9 | unknown op |
 | 10 | sequence conflict |
 | 11 | motor power absent |
+| 12 | core heartbeat stale: 0x701 not received since start-up, timed out, or the consumer 0x1016:01 is disabled (D12 alternative a; proposal, code number TODO(Evans) to confirm with D11) |
 | 0xFF | no command since start-up |
 
-Check order for MOVE_TO_STOP in the firmware: 1, 3, 5, 6, 2, already at that stop (accepted, no motion), 11, 4. STOP is never rejected. CLEAR_FAULT: 5 while motion is in progress; accepted no-op without a fault (D9); otherwise clears every fault whose condition is gone and answers 7 if any remain. START_HOMING: 3, 5, 8, then 11 and 4 if motion is needed.
+Check order for MOVE_TO_STOP in the firmware: 1, 3, 5, 12, 6, 2, already at that stop (accepted, no motion), 11, 4. STOP is never rejected. CLEAR_FAULT: 5 while motion is in progress; accepted no-op without a fault (D9); otherwise clears every fault whose condition is gone and answers 7 if any remain. START_HOMING: 3, 5, 12, 8, then 11 and 4 if motion is needed.
 
 Homing (D10, P-03 item 24, CTL-017 v1 task): if a stop sensor is active, the reference is taken there without motion; otherwise the lift drives down at the homing duty and the first stop sensor reached sets the reference. With 0x2101:30 = 1 (default) homing then continues to L1000 and cross-checks the count at each sensor on the way.
 

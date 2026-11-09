@@ -462,10 +462,11 @@ static void hb_consumer_rx(co_node_t *co, const co_frame_t *f)
     }
     co->hbc_last_rx_ms = co->now_ms;
     co->hbc_remote_state = f->data[0];
-    if (co->hbc == CO_HBC_LOST && co->cb.hb_consumer != NULL) {
+    co_hbc_state_t before = co->hbc;
+    co->hbc = CO_HBC_ACTIVE; /* before the callback, which may read it */
+    if (before == CO_HBC_LOST && co->cb.hb_consumer != NULL) {
         co->cb.hb_consumer(co->ctx, false);
     }
-    co->hbc = CO_HBC_ACTIVE;
 }
 
 void co_process(co_node_t *co, const co_frame_t *f, uint32_t now_ms)
