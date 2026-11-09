@@ -772,6 +772,27 @@ static void test_homing_interrupted_by_fault(void)
     CHECK_EQ(f.lift.state, LIFT_STATE_UNHOMED);
 }
 
+/* The TIM5 count is a free-running 32-bit counter: a move across its wrap
+ * point keeps position, direction and Hall-window checks right. */
+static void test_counter_wrap(void)
+{
+    fx_t f;
+    memset(&f, 0, sizeof(f));
+    fx_cfg(&f.cfg);
+    f.now = 1000;
+    plant_init(&f.plant, MM(180));
+    f.plant.count_offset = INT32_MAX - 300; /* wraps during the move up */
+    f.plant.hall_count_frozen_value = (int32_t)((uint32_t)f.plant.hall_count_frozen_value + (uint32_t)f.plant.count_offset);
+    lift_init(&f.lift, &f.cfg, f.now);
+    fx_run(&f, 200);
+    CHECK_EQ(f.lift.state, LIFT_STATE_IDLE);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_MOVE_TO_STOP, 2), LIFT_RES_ACCEPTED);
+    fx_run_until_rest(&f, 30000);
+    CHECK_EQ(f.lift.faults, 0);
+    CHECK_EQ(fx_status(&f).active_stop_id, 2);
+    CHECK(abs64(lift_position_nm(&f.lift) - f.plant.pos_nm) <= MM(1));
+}
+
 int main(void)
 {
     RUN(test_config_defaults_valid);
@@ -812,5 +833,6 @@ int main(void)
     RUN(test_clear_without_fault_is_noop);
     RUN(test_commands_during_init);
     RUN(test_brake_mode);
+    RUN(test_counter_wrap);
     TEST_MAIN_END();
 }

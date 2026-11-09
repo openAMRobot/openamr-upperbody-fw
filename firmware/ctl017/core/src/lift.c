@@ -14,9 +14,15 @@ static int32_t hall_sign(const lift_t *l)
     return l->cfg.hall_count_up_positive ? 1 : -1;
 }
 
+/* a - b on the free-running counter, wrap-safe (TIM5 is a 32-bit counter). */
+static int32_t count_diff(int32_t a, int32_t b)
+{
+    return (int32_t)((uint32_t)a - (uint32_t)b);
+}
+
 int64_t lift_position_nm(const lift_t *l)
 {
-    int64_t dc = (int64_t)hall_sign(l) * ((int64_t)l->last_count - (int64_t)l->ref_count);
+    int64_t dc = (int64_t)hall_sign(l) * count_diff(l->last_count, l->ref_count);
     return l->ref_pos_nm + dc * (int64_t)l->cfg.hall_nm_per_count;
 }
 
@@ -431,7 +437,7 @@ static void update_velocity(lift_t *l)
         }
         return;
     }
-    int64_t dc = (int64_t)hall_sign(l) * ((int64_t)l->last_count - (int64_t)l->vel_c0);
+    int64_t dc = (int64_t)hall_sign(l) * count_diff(l->last_count, l->vel_c0);
     /* nm per ms = um/s; 0.1 mm/s = 100 um/s */
     int64_t v = dc * l->cfg.hall_nm_per_count / (int64_t)dt / 100;
     if (v > 32767) {
@@ -521,7 +527,7 @@ static void check_drive(lift_t *l)
     }
 
     /* Direction check: count running against the commanded direction. */
-    int32_t progress = hall_sign(l) * (l->last_count - l->dir_ref_count) * (int32_t)l->dir;
+    int32_t progress = hall_sign(l) * count_diff(l->last_count, l->dir_ref_count) * (int32_t)l->dir;
     if (progress > 0) {
         l->dir_ref_count = l->last_count;
     } else if (-progress > (int32_t)c->wrong_dir_counts) {
@@ -540,7 +546,7 @@ static void check_drive(lift_t *l)
         }
         uint32_t w = l->now_ms - l->win_start_ms;
         if (w >= c->hall_window_ms) {
-            int32_t dc = l->last_count - l->win_start_count;
+            int32_t dc = count_diff(l->last_count, l->win_start_count);
             if (dc < 0) {
                 dc = -dc;
             }

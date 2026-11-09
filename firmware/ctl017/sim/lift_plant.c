@@ -57,7 +57,7 @@ void plant_step(lift_plant_t *p, const lift_hbridge_cmd_t *hb, uint32_t dt_ms)
     }
     p->hall_scaled_nm += (p->pos_nm - before) * p->hall_rate_pct / 100;
     if (!p->hall_frozen && p->hall_supply_ok) {
-        p->hall_count_frozen_value = (int32_t)(p->hall_scaled_nm / p->nm_per_count) + p->count_offset;
+        p->hall_count_frozen_value = (int32_t)((uint32_t)(int32_t)(p->hall_scaled_nm / p->nm_per_count) + (uint32_t)p->count_offset);
     }
 }
 
@@ -68,7 +68,7 @@ void plant_inputs(const lift_plant_t *p, uint32_t now_ms, lift_inputs_t *in)
     if (p->hall_frozen || !p->hall_supply_ok) {
         in->hall_count = p->hall_count_frozen_value;
     } else {
-        in->hall_count = (int32_t)(p->hall_scaled_nm / p->nm_per_count) + p->count_offset;
+        in->hall_count = (int32_t)((uint32_t)(int32_t)(p->hall_scaled_nm / p->nm_per_count) + (uint32_t)p->count_offset);
     }
     in->hall_supply_ok = p->hall_supply_ok;
     in->motor_power_present = p->motor_power;

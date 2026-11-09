@@ -78,7 +78,7 @@ ctest --test-dir build --output-on-failure
 
 | ctest | What |
 |---|---|
-| test_lift | 38 core tests against the plant model, with ASan and UBSan |
+| test_lift | 39 core tests against the plant model, with ASan and UBSan |
 | test_canopen | 16 bus-level tests: NMT, heartbeat, SDO, PDO bytes, EMCY, parameters |
 | od_docs_up_to_date | `docs/ctl017.eds` and the table in `docs/ctl017_object_dictionary.md` match the firmware OD |
 | vcan_pytest | 6 python-can tests against `ctl017_sim` on vcan0 (skips without vcan) |
