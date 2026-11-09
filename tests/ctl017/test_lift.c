@@ -751,6 +751,27 @@ static void test_brake_mode(void)
     CHECK(f.hb->enable && f.hb->brake);
 }
 
+/* T29: homing interrupted by a new fault completes nothing:
+ * recovery_required stays set and the state is FAULT, then UNHOMED. */
+static void test_homing_interrupted_by_fault(void)
+{
+    fx_t f;
+    fx_init(&f, MM(100));
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_START_HOMING, 0), LIFT_RES_ACCEPTED);
+    fx_run(&f, 1000);
+    f.plant.jammed = true;
+    fx_run(&f, f.cfg.stall_ms + 5);
+    CHECK(f.lift.faults & LIFT_FAULT_F03_OVERCURRENT);
+    CHECK_EQ(f.lift.state, LIFT_STATE_FAULT);
+    CHECK(fx_status(&f).flags & LIFT_FLAG_RECOVERY_REQUIRED);
+    f.plant.jammed = false;
+    f.keepalive = false;
+    fx_run(&f, 300);
+    CHECK_EQ(fx_cmd(&f, LIFT_OP_CLEAR_FAULT, 0), LIFT_RES_ACCEPTED);
+    f.keepalive = false;
+    CHECK_EQ(f.lift.state, LIFT_STATE_UNHOMED);
+}
+
 int main(void)
 {
     RUN(test_config_defaults_valid);
@@ -785,6 +806,7 @@ int main(void)
     RUN(test_hall_supply_loss);
     RUN(test_standstill_timeout_f08);
     RUN(test_stop_during_homing_and_with_fault);
+    RUN(test_homing_interrupted_by_fault);
     RUN(test_end_switches);
     RUN(test_limit_already_active_rejects_direction);
     RUN(test_clear_without_fault_is_noop);
