@@ -195,11 +195,15 @@ def test_keepalive_loss_gives_emcy_f07(node):
     assert e[3] == 7
     st = LiftStatus.decode(m.wait_for(TPDO1_ID, lambda d: LiftStatus.decode(d).state == 6, 1.0))
     assert st.flags & (1 << 5)
-    # Clear: EMCY error reset, lift back to IDLE, no motion.
+    # CLEAR_FAULT is refused (busy) until standstill is confirmed: wait for
+    # the moving flag to drop, then clear. EMCY error reset follows.
+    assert m.wait_for(TPDO1_ID, lambda d: not LiftStatus.decode(d).flags & (1 << 2), 1.0) is not None
     m.command(2, 2, 0)
     m.keepalive = None
     r = m.wait_for(EMCY_ID, lambda d: d[0:2] == b"\x00\x00", 1.0)
     assert r is not None
+    d = m.wait_for(TPDO1_ID, lambda d: LiftStatus.decode(d).last_seq == 2, 1.0)
+    assert LiftStatus.decode(d).cmd_result == 0 and LiftStatus.decode(d).state == 3
 
 
 def test_motor_power_absent_rejected(node):
