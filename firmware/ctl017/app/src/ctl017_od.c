@@ -162,7 +162,7 @@ void ctl017_od_build(ctl017_app_t *a)
     }
     add(&b, 0x1014, 0, U32, CO_A_CONST, false, &a->cob_emcy, "COB-ID EMCY", NULL);
     add(&b, 0x1016, 0, U8, CO_A_CONST, false, &a->n_sub_1016, "Consumer heartbeat time: highest sub-index", NULL);
-    add(&b, 0x1016, 1, U32, CO_A_RW, false, &co->hb_consumer_entry, "Consumer heartbeat time 1 (node << 16 | ms)", co_write_hb_consumer);
+    add(&b, 0x1016, 1, U32, CO_A_RW, false, &co->hb_consumer_entry, "Consumer heartbeat time 1 (bits 16-23 node-ID, bits 0-15 ms)", co_write_hb_consumer);
     add(&b, 0x1017, 0, U16, CO_A_RW, false, &co->hb_producer_ms, "Producer heartbeat time (ms)", write_hb_producer);
     add(&b, 0x1018, 0, U8, CO_A_CONST, false, &a->n_sub_1018, "Identity: highest sub-index", NULL);
     add(&b, 0x1018, 1, U32, CO_A_CONST, false, &a->vendor_id, "Vendor-ID", NULL);
