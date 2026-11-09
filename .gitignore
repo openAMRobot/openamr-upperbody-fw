@@ -2,3 +2,5 @@ build/
 build-*/
 __pycache__/
 *.pyc
+boards/nucleo_g474re/vendor/
+build-g474/
