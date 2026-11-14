@@ -13,10 +13,8 @@ CreatedBy=OpenAMRobot
 
 [DeviceInfo]
 VendorName=OpenAMRobot
-VendorNumber=0x00000000
+; VendorNumber, ProductNumber, RevisionNumber: TODO(Evans)
 ProductName=CTL-017
-ProductNumber=0x00000011
-RevisionNumber=0x00010000
 BaudRate_10=0
 BaudRate_20=0
 BaudRate_50=0
@@ -194,7 +192,7 @@ ParameterName=Consumer heartbeat time 1 (bits 16-23 node-ID, bits 0-15 ms)
 ObjectType=0x7
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x0001012C
+; DefaultValue: TODO(Evans), set by base_node_id, hb_consumer_ms
 PDOMapping=0
 
 [1017]
@@ -202,7 +200,7 @@ ParameterName=Producer heartbeat time (ms)
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0064
+; DefaultValue: TODO(Evans), set by hb_producer_ms
 PDOMapping=0
 
 [1018]
@@ -223,7 +221,7 @@ ParameterName=Vendor-ID
 ObjectType=0x7
 DataType=0x0007
 AccessType=const
-DefaultValue=0x00000000
+; DefaultValue: TODO(Evans), set by vendor_id
 PDOMapping=0
 
 [1018sub2]
@@ -231,7 +229,7 @@ ParameterName=Product code
 ObjectType=0x7
 DataType=0x0007
 AccessType=const
-DefaultValue=0x00000011
+; DefaultValue: TODO(Evans), set by product_code
 PDOMapping=0
 
 [1018sub3]
@@ -239,7 +237,7 @@ ParameterName=Revision number
 ObjectType=0x7
 DataType=0x0007
 AccessType=const
-DefaultValue=0x00010000
+; DefaultValue: TODO(Evans), set by revision
 PDOMapping=0
 
 [1018sub4]
@@ -247,7 +245,7 @@ ParameterName=Serial number
 ObjectType=0x7
 DataType=0x0007
 AccessType=ro
-DefaultValue=0x00000000
+; DefaultValue: TODO(Evans), set by serial
 PDOMapping=0
 
 [1400]
@@ -280,11 +278,11 @@ DefaultValue=254
 PDOMapping=0
 
 [1400sub5]
-ParameterName=RPDO1 event timer: command deadline (ms)
+ParameterName=RPDO1 event timer (ms, supervised by the lift owner)
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x012C
+; DefaultValue: TODO(Evans), set by rpdo1_event_timer_ms
 PDOMapping=0
 
 [1401]
@@ -432,7 +430,7 @@ ParameterName=TPDO1 inhibit time (100 us)
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0064
+; DefaultValue: TODO(Evans), set by tpdo_inhibit_100us[0]
 PDOMapping=0
 
 [1800sub5]
@@ -440,7 +438,7 @@ ParameterName=TPDO1 event timer (ms)
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0064
+; DefaultValue: TODO(Evans), set by tpdo_event_ms[0]
 PDOMapping=0
 
 [1801]
@@ -477,7 +475,7 @@ ParameterName=TPDO2 inhibit time (100 us)
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0064
+; DefaultValue: TODO(Evans), set by tpdo_inhibit_100us[1]
 PDOMapping=0
 
 [1801sub5]
@@ -485,7 +483,7 @@ ParameterName=TPDO2 event timer (ms)
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0064
+; DefaultValue: TODO(Evans), set by tpdo_event_ms[1]
 PDOMapping=0
 
 [1A00]
@@ -819,7 +817,7 @@ ParameterName=head light dim level (0..100 %)
 ObjectType=0x7
 DataType=0x0005
 AccessType=rw
-DefaultValue=100
+DefaultValue=0
 PDOMapping=1
 
 [2011sub3]
@@ -848,7 +846,7 @@ ParameterName=stop 0 L1000 position (um above lower end)
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=5000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2100sub2]
@@ -856,7 +854,7 @@ ParameterName=stop 1 L1175 position (um above lower end)
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=180000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2100sub3]
@@ -864,7 +862,7 @@ ParameterName=stop 2 L1350 position (um above lower end)
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=355000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101]
@@ -885,7 +883,7 @@ ParameterName=hall_nm_per_count
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=209200
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub2]
@@ -893,7 +891,7 @@ ParameterName=hall_count_up_positive
 ObjectType=0x7
 DataType=0x0001
 AccessType=rw
-DefaultValue=1
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub3]
@@ -901,7 +899,7 @@ ParameterName=stop_tol_um
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=2000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub4]
@@ -909,7 +907,7 @@ ParameterName=xcheck_tol_um
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=2000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub5]
@@ -917,7 +915,7 @@ ParameterName=sensor_edge_offset_up_um
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=0
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub6]
@@ -925,7 +923,7 @@ ParameterName=sensor_edge_offset_down_um
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=0
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub7]
@@ -933,7 +931,7 @@ ParameterName=stop_lead_um
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=0
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub8]
@@ -941,7 +939,7 @@ ParameterName=sensor_overrun_um
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=3000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub9]
@@ -949,7 +947,7 @@ ParameterName=duty_move_permille
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x03E8
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101subA]
@@ -957,7 +955,7 @@ ParameterName=duty_homing_permille
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x01F4
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101subB]
@@ -965,7 +963,7 @@ ParameterName=move_speed_um_s
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=18000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101subC]
@@ -973,7 +971,7 @@ ParameterName=homing_speed_um_s
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
-DefaultValue=9000
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101subD]
@@ -981,7 +979,7 @@ ParameterName=hall_window_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x00C8
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101subE]
@@ -989,7 +987,7 @@ ParameterName=hall_start_grace_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x012C
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101subF]
@@ -997,7 +995,7 @@ ParameterName=move_rate_min_cps
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x002B
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub10]
@@ -1005,7 +1003,7 @@ ParameterName=move_rate_max_cps
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0082
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub11]
@@ -1013,7 +1011,7 @@ ParameterName=homing_rate_min_cps
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x000F
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub12]
@@ -1021,7 +1019,7 @@ ParameterName=homing_rate_max_cps
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0056
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub13]
@@ -1029,7 +1027,7 @@ ParameterName=stall_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x012C
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub14]
@@ -1037,7 +1035,7 @@ ParameterName=wrong_dir_counts
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x000A
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub15]
@@ -1045,7 +1043,7 @@ ParameterName=travel_timeout_factor_pct
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0096
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub16]
@@ -1053,7 +1051,7 @@ ParameterName=travel_timeout_margin_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x07D0
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub17]
@@ -1061,7 +1059,7 @@ ParameterName=overcurrent_ma
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x1B58
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub18]
@@ -1069,7 +1067,7 @@ ParameterName=overcurrent_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0064
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub19]
@@ -1077,7 +1075,7 @@ ParameterName=inrush_blank_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x00C8
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub1A]
@@ -1085,7 +1083,7 @@ ParameterName=sensor_debounce_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0005
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub1B]
@@ -1093,7 +1091,7 @@ ParameterName=standstill_quiet_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x0064
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub1C]
@@ -1101,7 +1099,7 @@ ParameterName=standstill_timeout_ms
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x01F4
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub1D]
@@ -1109,7 +1107,7 @@ ParameterName=end_switches_wired
 ObjectType=0x7
 DataType=0x0001
 AccessType=rw
-DefaultValue=0
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub1E]
@@ -1117,7 +1115,7 @@ ParameterName=homing_continue_to_stop0
 ObjectType=0x7
 DataType=0x0001
 AccessType=rw
-DefaultValue=1
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub1F]
@@ -1125,7 +1123,7 @@ ParameterName=stop_mode_brake
 ObjectType=0x7
 DataType=0x0001
 AccessType=rw
-DefaultValue=0
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2101sub20]
@@ -1133,7 +1131,7 @@ ParameterName=rereference_on_sensor
 ObjectType=0x7
 DataType=0x0001
 AccessType=rw
-DefaultValue=1
+; DefaultValue: TODO(Evans), set by lift owner (TODO(Evans))
 PDOMapping=0
 
 [2300]

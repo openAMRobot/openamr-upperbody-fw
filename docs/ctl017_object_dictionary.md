@@ -189,17 +189,17 @@ Access "rw (PRE-OP only)" is written as `rw` in the EDS; "rww (RPDO only)" is wr
 | 0x1003 | 8 | Standard error field 8 | UNSIGNED32 | ro |  | 0x00000000 |
 | 0x1014 | 0 | COB-ID EMCY | UNSIGNED32 | const |  | 0x00000090 |
 | 0x1016 | 0 | Consumer heartbeat time: highest sub-index | UNSIGNED8 | const |  | 1 |
-| 0x1016 | 1 | Consumer heartbeat time 1 (bits 16-23 node-ID, bits 0-15 ms) | UNSIGNED32 | rw |  | 0x0001012C |
-| 0x1017 | 0 | Producer heartbeat time (ms) | UNSIGNED16 | rw |  | 0x0064 |
+| 0x1016 | 1 | Consumer heartbeat time 1 (bits 16-23 node-ID, bits 0-15 ms) | UNSIGNED32 | rw |  | TODO(Evans): base_node_id, hb_consumer_ms |
+| 0x1017 | 0 | Producer heartbeat time (ms) | UNSIGNED16 | rw |  | TODO(Evans): hb_producer_ms |
 | 0x1018 | 0 | Identity: highest sub-index | UNSIGNED8 | const |  | 4 |
-| 0x1018 | 1 | Vendor-ID | UNSIGNED32 | const |  | 0x00000000 |
-| 0x1018 | 2 | Product code | UNSIGNED32 | const |  | 0x00000011 |
-| 0x1018 | 3 | Revision number | UNSIGNED32 | const |  | 0x00010000 |
-| 0x1018 | 4 | Serial number | UNSIGNED32 | ro |  | 0x00000000 |
+| 0x1018 | 1 | Vendor-ID | UNSIGNED32 | const |  | TODO(Evans): vendor_id |
+| 0x1018 | 2 | Product code | UNSIGNED32 | const |  | TODO(Evans): product_code |
+| 0x1018 | 3 | Revision number | UNSIGNED32 | const |  | TODO(Evans): revision |
+| 0x1018 | 4 | Serial number | UNSIGNED32 | ro |  | TODO(Evans): serial |
 | 0x1400 | 0 | RPDO1 comm: highest sub-index | UNSIGNED8 | const |  | 5 |
 | 0x1400 | 1 | RPDO1 COB-ID | UNSIGNED32 | const |  | 0x00000210 |
 | 0x1400 | 2 | RPDO1 transmission type | UNSIGNED8 | const |  | 254 |
-| 0x1400 | 5 | RPDO1 event timer: command deadline (ms) | UNSIGNED16 | rw (PRE-OP only) |  | 0x012C |
+| 0x1400 | 5 | RPDO1 event timer (ms, supervised by the lift owner) | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): rpdo1_event_timer_ms |
 | 0x1401 | 0 | RPDO2 comm: highest sub-index | UNSIGNED8 | const |  | 5 |
 | 0x1401 | 1 | RPDO2 COB-ID | UNSIGNED32 | const |  | 0x00000310 |
 | 0x1401 | 2 | RPDO2 transmission type | UNSIGNED8 | const |  | 254 |
@@ -215,13 +215,13 @@ Access "rw (PRE-OP only)" is written as `rw` in the EDS; "rww (RPDO only)" is wr
 | 0x1800 | 0 | TPDO1 comm: highest sub-index | UNSIGNED8 | const |  | 5 |
 | 0x1800 | 1 | TPDO1 COB-ID | UNSIGNED32 | const |  | 0x40000190 |
 | 0x1800 | 2 | TPDO1 transmission type | UNSIGNED8 | const |  | 254 |
-| 0x1800 | 3 | TPDO1 inhibit time (100 us) | UNSIGNED16 | rw (PRE-OP only) |  | 0x0064 |
-| 0x1800 | 5 | TPDO1 event timer (ms) | UNSIGNED16 | rw |  | 0x0064 |
+| 0x1800 | 3 | TPDO1 inhibit time (100 us) | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): tpdo_inhibit_100us[0] |
+| 0x1800 | 5 | TPDO1 event timer (ms) | UNSIGNED16 | rw |  | TODO(Evans): tpdo_event_ms[0] |
 | 0x1801 | 0 | TPDO2 comm: highest sub-index | UNSIGNED8 | const |  | 5 |
 | 0x1801 | 1 | TPDO2 COB-ID | UNSIGNED32 | const |  | 0x40000290 |
 | 0x1801 | 2 | TPDO2 transmission type | UNSIGNED8 | const |  | 254 |
-| 0x1801 | 3 | TPDO2 inhibit time (100 us) | UNSIGNED16 | rw (PRE-OP only) |  | 0x0064 |
-| 0x1801 | 5 | TPDO2 event timer (ms) | UNSIGNED16 | rw |  | 0x0064 |
+| 0x1801 | 3 | TPDO2 inhibit time (100 us) | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): tpdo_inhibit_100us[1] |
+| 0x1801 | 5 | TPDO2 event timer (ms) | UNSIGNED16 | rw |  | TODO(Evans): tpdo_event_ms[1] |
 | 0x1A00 | 0 | TPDO1 mapping: number of entries | UNSIGNED8 | const |  | 7 |
 | 0x1A00 | 1 | TPDO1 mapping 1 | UNSIGNED32 | const |  | 0x20000108 |
 | 0x1A00 | 2 | TPDO1 mapping 2 | UNSIGNED32 | const |  | 0x20000208 |
@@ -259,45 +259,45 @@ Access "rw (PRE-OP only)" is written as `rw` in the EDS; "rww (RPDO only)" is wr
 | 0x2010 | 3 | stop_id (0 L1000, 1 L1175, 2 L1350) | UNSIGNED8 | rww (RPDO only) | yes | 0 |
 | 0x2011 | 0 | AuxCommand: highest sub-index | UNSIGNED8 | const |  | 3 |
 | 0x2011 | 1 | head light on (0/1) | UNSIGNED8 | rw | yes | 0 |
-| 0x2011 | 2 | head light dim level (0..100 %) | UNSIGNED8 | rw | yes | 100 |
+| 0x2011 | 2 | head light dim level (0..100 %) | UNSIGNED8 | rw | yes | 0 |
 | 0x2011 | 3 | Getac power or charging enable (0/1) | UNSIGNED8 | rw | yes | 0 |
 | 0x2100 | 0 | Stop positions: highest sub-index | UNSIGNED8 | const |  | 3 |
-| 0x2100 | 1 | stop 0 L1000 position (um above lower end) | INTEGER32 | rw (PRE-OP only) |  | 5000 |
-| 0x2100 | 2 | stop 1 L1175 position (um above lower end) | INTEGER32 | rw (PRE-OP only) |  | 180000 |
-| 0x2100 | 3 | stop 2 L1350 position (um above lower end) | INTEGER32 | rw (PRE-OP only) |  | 355000 |
+| 0x2100 | 1 | stop 0 L1000 position (um above lower end) | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2100 | 2 | stop 1 L1175 position (um above lower end) | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2100 | 3 | stop 2 L1350 position (um above lower end) | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
 | 0x2101 | 0 | Lift parameters: highest sub-index | UNSIGNED8 | const |  | 32 |
-| 0x2101 | 1 | hall_nm_per_count | INTEGER32 | rw (PRE-OP only) |  | 209200 |
-| 0x2101 | 2 | hall_count_up_positive | BOOLEAN | rw (PRE-OP only) |  | 1 |
-| 0x2101 | 3 | stop_tol_um | INTEGER32 | rw (PRE-OP only) |  | 2000 |
-| 0x2101 | 4 | xcheck_tol_um | INTEGER32 | rw (PRE-OP only) |  | 2000 |
-| 0x2101 | 5 | sensor_edge_offset_up_um | INTEGER32 | rw (PRE-OP only) |  | 0 |
-| 0x2101 | 6 | sensor_edge_offset_down_um | INTEGER32 | rw (PRE-OP only) |  | 0 |
-| 0x2101 | 7 | stop_lead_um | INTEGER32 | rw (PRE-OP only) |  | 0 |
-| 0x2101 | 8 | sensor_overrun_um | INTEGER32 | rw (PRE-OP only) |  | 3000 |
-| 0x2101 | 9 | duty_move_permille | UNSIGNED16 | rw (PRE-OP only) |  | 0x03E8 |
-| 0x2101 | 10 | duty_homing_permille | UNSIGNED16 | rw (PRE-OP only) |  | 0x01F4 |
-| 0x2101 | 11 | move_speed_um_s | INTEGER32 | rw (PRE-OP only) |  | 18000 |
-| 0x2101 | 12 | homing_speed_um_s | INTEGER32 | rw (PRE-OP only) |  | 9000 |
-| 0x2101 | 13 | hall_window_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x00C8 |
-| 0x2101 | 14 | hall_start_grace_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x012C |
-| 0x2101 | 15 | move_rate_min_cps | UNSIGNED16 | rw (PRE-OP only) |  | 0x002B |
-| 0x2101 | 16 | move_rate_max_cps | UNSIGNED16 | rw (PRE-OP only) |  | 0x0082 |
-| 0x2101 | 17 | homing_rate_min_cps | UNSIGNED16 | rw (PRE-OP only) |  | 0x000F |
-| 0x2101 | 18 | homing_rate_max_cps | UNSIGNED16 | rw (PRE-OP only) |  | 0x0056 |
-| 0x2101 | 19 | stall_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x012C |
-| 0x2101 | 20 | wrong_dir_counts | UNSIGNED16 | rw (PRE-OP only) |  | 0x000A |
-| 0x2101 | 21 | travel_timeout_factor_pct | UNSIGNED16 | rw (PRE-OP only) |  | 0x0096 |
-| 0x2101 | 22 | travel_timeout_margin_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x07D0 |
-| 0x2101 | 23 | overcurrent_ma | UNSIGNED16 | rw (PRE-OP only) |  | 0x1B58 |
-| 0x2101 | 24 | overcurrent_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x0064 |
-| 0x2101 | 25 | inrush_blank_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x00C8 |
-| 0x2101 | 26 | sensor_debounce_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x0005 |
-| 0x2101 | 27 | standstill_quiet_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x0064 |
-| 0x2101 | 28 | standstill_timeout_ms | UNSIGNED16 | rw (PRE-OP only) |  | 0x01F4 |
-| 0x2101 | 29 | end_switches_wired | BOOLEAN | rw (PRE-OP only) |  | 0 |
-| 0x2101 | 30 | homing_continue_to_stop0 | BOOLEAN | rw (PRE-OP only) |  | 1 |
-| 0x2101 | 31 | stop_mode_brake | BOOLEAN | rw (PRE-OP only) |  | 0 |
-| 0x2101 | 32 | rereference_on_sensor | BOOLEAN | rw (PRE-OP only) |  | 1 |
+| 0x2101 | 1 | hall_nm_per_count | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 2 | hall_count_up_positive | BOOLEAN | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 3 | stop_tol_um | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 4 | xcheck_tol_um | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 5 | sensor_edge_offset_up_um | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 6 | sensor_edge_offset_down_um | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 7 | stop_lead_um | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 8 | sensor_overrun_um | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 9 | duty_move_permille | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 10 | duty_homing_permille | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 11 | move_speed_um_s | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 12 | homing_speed_um_s | INTEGER32 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 13 | hall_window_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 14 | hall_start_grace_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 15 | move_rate_min_cps | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 16 | move_rate_max_cps | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 17 | homing_rate_min_cps | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 18 | homing_rate_max_cps | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 19 | stall_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 20 | wrong_dir_counts | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 21 | travel_timeout_factor_pct | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 22 | travel_timeout_margin_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 23 | overcurrent_ma | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 24 | overcurrent_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 25 | inrush_blank_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 26 | sensor_debounce_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 27 | standstill_quiet_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 28 | standstill_timeout_ms | UNSIGNED16 | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 29 | end_switches_wired | BOOLEAN | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 30 | homing_continue_to_stop0 | BOOLEAN | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 31 | stop_mode_brake | BOOLEAN | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
+| 0x2101 | 32 | rereference_on_sensor | BOOLEAN | rw (PRE-OP only) |  | TODO(Evans): lift owner (TODO(Evans)) |
 | 0x2300 | 0 | Diagnostics: highest sub-index | UNSIGNED8 | const |  | 3 |
 | 0x2300 | 1 | Hall count (raw) | INTEGER32 | ro |  | 0 |
 | 0x2300 | 2 | Reset cause (board port, TODO(Evans) encoding) | UNSIGNED8 | ro |  | 0 |

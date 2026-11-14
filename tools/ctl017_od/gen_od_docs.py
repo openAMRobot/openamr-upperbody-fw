@@ -56,6 +56,8 @@ def load(dump_exe):
 
 
 def fmt_value(e):
+    if e.get("param"):
+        return "TODO(Evans): %s" % e["param"]
     name, size = TYPES[e["type"]]
     v = e["value"]
     if name.startswith("UNSIGNED") and size >= 2:
@@ -68,6 +70,15 @@ def group(entries):
     for e in entries:
         objs.setdefault(e["index"], []).append(e)
     return dict(sorted(objs.items()))
+
+
+def eds_default(add, e):
+    # CiA 306 allows DefaultValue to be absent; an integration parameter has
+    # no default, so it is named in a comment instead.
+    if e.get("param"):
+        add("; DefaultValue: TODO(Evans), set by %s" % e["param"])
+    else:
+        add("DefaultValue=%s" % fmt_value(e))
 
 
 def render_eds(entries):
@@ -89,11 +100,10 @@ def render_eds(entries):
     add("")
     add("[DeviceInfo]")
     add("VendorName=OpenAMRobot")
-    ident = {e["sub"]: e["value"] for e in objs[0x1018]}
-    add("VendorNumber=0x%08X" % ident[1])
+    # Identity values are integration parameters with no default: left out
+    # of the EDS until the owner sets them (TODO(Evans)).
+    add("; VendorNumber, ProductNumber, RevisionNumber: TODO(Evans)")
     add("ProductName=CTL-017")
-    add("ProductNumber=0x%08X" % ident[2])
-    add("RevisionNumber=0x%08X" % ident[3])
     for rate in (10, 20, 50, 125, 250, 500, 800, 1000):
         add("BaudRate_%d=%d" % (rate, 1 if rate == 500 else 0))
     add("SimpleBootUpMaster=0")
@@ -101,7 +111,7 @@ def render_eds(entries):
     add("Granularity=0")
     add("DynamicChannelsSupported=0")
     add("GroupMessaging=0")
-    add("NrOfRXPDO=2")
+    add("NrOfRXPDO=%d" % sum(1 for i in objs if 0x1400 <= i <= 0x15FF))
     add("NrOfTXPDO=2")
     add("LSS_Supported=0")
     add("")
@@ -127,7 +137,7 @@ def render_eds(entries):
             add("ObjectType=0x7")
             add("DataType=0x%04X" % e["type"])
             add("AccessType=%s" % EDS_ACCESS[e["access"]])
-            add("DefaultValue=%s" % fmt_value(e))
+            eds_default(add, e)
             add("PDOMapping=%d" % (1 if e["pdo"] else 0))
             add("")
             continue
@@ -143,7 +153,7 @@ def render_eds(entries):
             add("ObjectType=0x7")
             add("DataType=0x%04X" % e["type"])
             add("AccessType=%s" % EDS_ACCESS[e["access"]])
-            add("DefaultValue=%s" % fmt_value(e))
+            eds_default(add, e)
             add("PDOMapping=%d" % (1 if e["pdo"] else 0))
             add("")
     return "\n".join(lines)

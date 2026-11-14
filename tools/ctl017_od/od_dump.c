@@ -3,18 +3,15 @@
  *
  * Prints the CTL-017 object dictionary as one JSON object per line, as
  * built by the firmware at start-up. Input of gen_od_docs.py.
+ *
+ * The OD is built with an empty config: entries set by an integration
+ * parameter carry its name in "param" and their value is not printed as a
+ * default (there is none, TODO(Evans)).
  */
 #include <stdio.h>
 #include <string.h>
 
 #include "ctl017/ctl017_app.h"
-
-static bool no_send(void *ctx, const co_frame_t *f)
-{
-    (void)ctx;
-    (void)f;
-    return true;
-}
 
 static const char *access_name(uint8_t a)
 {
@@ -38,12 +35,10 @@ static ctl017_app_t app;
 
 int main(void)
 {
-    lift_config_t lc;
-    aux_config_t ac;
-    lift_config_default(&lc);
-    aux_config_default(&ac);
-    if (!ctl017_app_init(&app, &lc, &ac, no_send, NULL, 0)) {
-        fprintf(stderr, "OD or PDO mapping inconsistent\n");
+    bool ok = true;
+    ctl017_od_build(&app, &ok);
+    if (!ok) {
+        fprintf(stderr, "OD inconsistent\n");
         return 1;
     }
     for (size_t i = 0; i < app.od_len; i++) {
@@ -56,9 +51,9 @@ int main(void)
             sv = (int16_t)(uint16_t)v;
         }
         printf("{\"index\": %u, \"sub\": %u, \"type\": %u, \"access\": \"%s\", \"pdo\": %s, "
-               "\"value\": %lld, \"name\": \"%s\"}\n",
+               "\"value\": %lld, \"name\": \"%s\", \"param\": %s%s%s}\n",
                e->index, e->sub, e->type, access_name(e->access), e->pdo_mappable ? "true" : "false",
-               sv, e->name);
+               sv, e->name, e->param ? "\"" : "", e->param ? e->param : "null", e->param ? "\"" : "");
     }
     return 0;
 }
