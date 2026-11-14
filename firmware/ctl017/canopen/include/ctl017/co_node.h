@@ -23,8 +23,10 @@ extern "C" {
 
 /* ---- Frames ---------------------------------------------------------------- */
 typedef struct {
-    uint16_t id;      /* 11-bit identifier */
-    uint8_t dlc;
+    uint32_t id;      /* identifier as received; must be <= 0x7FF for CANopen */
+    bool ext;         /* 29-bit identifier: never a CANopen object here */
+    bool rtr;         /* remote frame: carries no data, never processed */
+    uint8_t dlc;      /* 0..8 */
     uint8_t data[8];
 } co_frame_t;
 
@@ -88,6 +90,9 @@ struct co_od_entry {
     void *data;        /* points to a variable of the matching C type */
     const char *name;  /* for the EDS and the documentation dump */
     co_write_fn on_write;
+    /* Name of the integration parameter that sets this value, or NULL when
+     * the value is fixed by the object dictionary. Documentation only. */
+    const char *param;
 };
 
 uint8_t co_type_size(uint8_t type);
@@ -104,6 +109,7 @@ void co_od_set(const co_od_entry_t *e, uint32_t v);
 #define CO_SDO_ABORT_NO_OBJECT      0x06020000u
 #define CO_SDO_ABORT_TYPE_LENGTH    0x06070010u
 #define CO_SDO_ABORT_NO_SUB         0x06090011u
+#define CO_SDO_ABORT_PARAM_INCOMPAT 0x06040043u
 #define CO_SDO_ABORT_VALUE_RANGE    0x06090030u
 #define CO_SDO_ABORT_GENERAL        0x08000000u
 #define CO_SDO_ABORT_LOCAL_CONTROL  0x08000021u
@@ -143,7 +149,7 @@ typedef struct {
 } co_rpdo_t;
 
 #define CO_MAX_TPDO 2u
-#define CO_MAX_RPDO 2u
+#define CO_MAX_RPDO 3u
 #define CO_ERR_HISTORY 8u
 
 /* ---- Callbacks to the application ----------------------------------------- */
@@ -158,17 +164,37 @@ typedef struct {
     void (*rpdo_received)(void *ctx, uint8_t n, uint32_t now_ms);
     void (*nmt_changed)(void *ctx, co_nmt_state_t from, co_nmt_state_t to);
     void (*reset_node)(void *ctx);
-    /* Heartbeat consumer state change: lost = true when the monitored node's
-     * heartbeat timed out, false when it came back. */
-    void (*hb_consumer)(void *ctx, bool lost);
+    /* NMT reset communication: the application restores the power-on values
+     * of the communication objects it owns (0x1000 to 0x1FFF). Called before
+     * the boot-up message is sent again. */
+    void (*reset_comm)(void *ctx);
+    /* Heartbeat consumer events (data only, see co_hbc_event_t). */
+    void (*hb_consumer)(void *ctx, int event);
 } co_callbacks_t;
 
 typedef enum {
-    CO_HBC_OFF = 0,     /* not configured (time 0) */
-    CO_HBC_WAITING,     /* configured, no heartbeat seen yet */
-    CO_HBC_ACTIVE,
-    CO_HBC_LOST,
+    CO_HBC_OFF = 0,     /* not configured (time 0 or node 0) */
+    CO_HBC_WAITING,     /* configured, no heartbeat seen since start or reconfiguration */
+    CO_HBC_ACTIVE,      /* heartbeat received within the consumer time */
+    CO_HBC_LOST,        /* consumer time elapsed since the last heartbeat */
 } co_hbc_state_t;
+
+/* Events reported through co_callbacks_t.hb_consumer. The CANopen layer
+ * only observes; what the node does about them is not decided here. */
+typedef enum {
+    CO_HBC_EV_TIMEOUT = 1,     /* ACTIVE to LOST */
+    CO_HBC_EV_RECOVERED = 2,   /* LOST to ACTIVE after a valid heartbeat */
+    CO_HBC_EV_REMOTE_BOOT = 3, /* boot-up message (state 0x00) of the monitored node */
+    CO_HBC_EV_STARTED = 4,     /* WAITING to ACTIVE, first heartbeat */
+} co_hbc_event_t;
+
+/* Communication error bits kept by the node (error register bit 4). */
+#define CO_COMM_ERR_RPDO_LEN  (1u << 0) /* EMCY 0x8210: RPDO shorter than its mapping */
+#define CO_COMM_ERR_HB        (1u << 1) /* EMCY 0x8130: heartbeat consumer timeout */
+#define CO_EMCY_PDO_LENGTH    0x8210u
+#define CO_EMCY_PDO_LENGTH_EX 0x8220u
+#define CO_EMCY_HEARTBEAT     0x8130u
+#define CO_EMCY_NO_ERROR      0x0000u
 
 struct co_node {
     uint8_t node_id;
@@ -181,7 +207,11 @@ struct co_node {
     /* OD-backed communication variables */
     uint16_t hb_producer_ms;      /* 0x1017 */
     uint32_t hb_consumer_entry;   /* 0x1016:01 = node << 16 | time_ms */
-    uint8_t error_register;       /* 0x1001 */
+    uint16_t hb_producer_default; /* power-on values restored by reset communication */
+    uint32_t hb_consumer_default;
+    uint8_t error_register;       /* 0x1001 = app_error_register | communication bits */
+    uint8_t app_error_register;   /* set with co_set_app_error_register() */
+    uint8_t comm_errors;          /* CO_COMM_ERR_* */
     uint8_t err_count;            /* 0x1003:00 */
     uint32_t err_history[CO_ERR_HISTORY]; /* 0x1003:01..08 */
 
@@ -189,6 +219,7 @@ struct co_node {
     co_hbc_state_t hbc;
     uint32_t hbc_last_rx_ms;
     uint8_t hbc_remote_state;
+    uint32_t hbc_remote_boots;    /* boot-up messages seen from the monitored node */
 
     co_tpdo_t tpdo[CO_MAX_TPDO];
     uint8_t n_tpdo;
@@ -196,7 +227,10 @@ struct co_node {
     uint8_t n_rpdo;
 
     uint32_t now_ms;
-    uint32_t rx_pdo_len_errors;
+    uint32_t rx_pdo_len_errors;   /* RPDO shorter than the mapping, not processed */
+    uint32_t rx_pdo_len_excess;   /* RPDO longer than the mapping, first bytes used */
+    uint32_t rx_malformed;        /* frames dropped: RTR, 29-bit, DLC > 8, bad NMT/SDO/heartbeat length or value */
+    uint32_t tx_failures;         /* send callback refused a frame; retried where periodic */
 };
 
 /* Standard write hooks for the communication objects. */
@@ -211,8 +245,16 @@ bool co_init(co_node_t *co, uint8_t node_id, const co_od_entry_t *od, size_t od_
 bool co_add_tpdo(co_node_t *co, const co_tpdo_cfg_t *cfg);
 bool co_add_rpdo(co_node_t *co, const co_rpdo_cfg_t *cfg);
 
+/* Sets the power-on values of 0x1017 and 0x1016:01 (restored by NMT reset
+ * communication) and applies them. Call before co_start(). */
+void co_set_comm_defaults(co_node_t *co, uint16_t hb_producer_ms, uint32_t hb_consumer_entry);
+
 /* Sends the boot-up message and enters PRE-OPERATIONAL. */
 void co_start(co_node_t *co, uint32_t now_ms);
+
+/* Application part of the error register 0x1001 (bits other than 4). When
+ * the combined register returns to 0 the node sends EMCY 0x0000. */
+void co_set_app_error_register(co_node_t *co, uint8_t bits);
 
 void co_process(co_node_t *co, const co_frame_t *f, uint32_t now_ms);
 void co_step(co_node_t *co, uint32_t now_ms);

@@ -167,7 +167,7 @@ bool co_add_rpdo(co_node_t *co, const co_rpdo_cfg_t *cfg)
     return true;
 }
 
-static void send(co_node_t *co, uint16_t id, uint8_t dlc, const uint8_t *data)
+static bool send(co_node_t *co, uint16_t id, uint8_t dlc, const uint8_t *data)
 {
     co_frame_t f;
     memset(&f, 0, sizeof(f));
@@ -176,9 +176,48 @@ static void send(co_node_t *co, uint16_t id, uint8_t dlc, const uint8_t *data)
     if (dlc > 0u) {
         memcpy(f.data, data, dlc);
     }
-    if (co->cb.send != NULL) {
-        (void)co->cb.send(co->ctx, &f);
+    bool ok = (co->cb.send != NULL) && co->cb.send(co->ctx, &f);
+    if (!ok) {
+        co->tx_failures++;
     }
+    return ok;
+}
+
+static void update_error_register(co_node_t *co)
+{
+    uint8_t before = co->error_register;
+    uint8_t r = co->app_error_register;
+    if (co->comm_errors != 0u) {
+        r |= 0x01u | 0x10u; /* generic, communication */
+    }
+    co->error_register = r;
+    if (before != 0u && r == 0u) {
+        uint8_t z[5] = {0, 0, 0, 0, 0};
+        co_emcy(co, CO_EMCY_NO_ERROR, z); /* CiA 301: error reset */
+    }
+}
+
+void co_set_app_error_register(co_node_t *co, uint8_t bits)
+{
+    co->app_error_register = bits;
+    update_error_register(co);
+}
+
+static void comm_error_set(co_node_t *co, uint8_t bit, uint16_t code, uint8_t info)
+{
+    uint8_t mfr[5] = {info, 0, 0, 0, 0};
+    co->comm_errors |= bit;
+    update_error_register(co);
+    co_emcy(co, code, mfr);
+}
+
+static void comm_error_clear(co_node_t *co, uint8_t bit)
+{
+    if ((co->comm_errors & bit) == 0u) {
+        return;
+    }
+    co->comm_errors &= (uint8_t)~bit;
+    update_error_register(co);
 }
 
 static void set_nmt(co_node_t *co, co_nmt_state_t s)
@@ -199,25 +238,39 @@ static void set_nmt(co_node_t *co, co_nmt_state_t s)
     }
 }
 
+/* (Re)configuration never reports a recovery: a consumer that was LOST and
+ * is reconfigured goes to WAITING (or OFF) and needs a new heartbeat. */
 static void hbc_configure(co_node_t *co)
 {
     uint16_t t = (uint16_t)co->hb_consumer_entry;
     uint8_t node = (uint8_t)(co->hb_consumer_entry >> 16);
-    co_hbc_state_t before = co->hbc;
     co->hbc = (t == 0u || node == 0u || node > 127u) ? CO_HBC_OFF : CO_HBC_WAITING;
-    if (before == CO_HBC_LOST && co->cb.hb_consumer != NULL) {
-        co->cb.hb_consumer(co->ctx, false);
-    }
+    co->hbc_remote_state = 0xFFu;
+    comm_error_clear(co, CO_COMM_ERR_HB);
+}
+
+void co_set_comm_defaults(co_node_t *co, uint16_t hb_producer_ms, uint32_t hb_consumer_entry)
+{
+    co->hb_producer_default = hb_producer_ms;
+    co->hb_consumer_default = hb_consumer_entry;
+    co->hb_producer_ms = hb_producer_ms;
+    co->hb_consumer_entry = hb_consumer_entry;
 }
 
 void co_start(co_node_t *co, uint32_t now_ms)
 {
     co->now_ms = now_ms;
     co->nmt = CO_NMT_INITIALISING;
+    co->comm_errors = 0;
+    update_error_register(co); /* no EMCY can leave in INITIALISING */
     uint8_t boot = 0x00;
-    send(co, (uint16_t)(CO_ID_HEARTBEAT + co->node_id), 1, &boot);
+    (void)send(co, (uint16_t)(CO_ID_HEARTBEAT + co->node_id), 1, &boot);
     co->last_hb_tx_ms = now_ms;
     hbc_configure(co);
+    for (uint8_t i = 0; i < co->n_tpdo; i++) {
+        co->tpdo[i].sent_once = false;
+        memset(co->tpdo[i].last, 0, sizeof(co->tpdo[i].last));
+    }
     set_nmt(co, CO_NMT_PRE_OPERATIONAL);
 }
 
@@ -237,8 +290,12 @@ uint32_t co_write_err_count(co_node_t *co, const co_od_entry_t *e, uint32_t valu
 uint32_t co_write_hb_consumer(co_node_t *co, const co_od_entry_t *e, uint32_t value)
 {
     (void)e;
-    if ((value & 0xFF000000u) != 0u || (value >> 16) > 127u) {
+    uint8_t node = (uint8_t)(value >> 16);
+    if ((value & 0xFF000000u) != 0u || node > 127u) {
         return CO_SDO_ABORT_VALUE_RANGE;
+    }
+    if (node == co->node_id && (uint16_t)value != 0u) {
+        return CO_SDO_ABORT_PARAM_INCOMPAT; /* a node cannot consume its own heartbeat */
     }
     co->hb_consumer_entry = value;
     hbc_configure(co);
@@ -254,7 +311,7 @@ static void sdo_abort(co_node_t *co, uint16_t idx, uint8_t sub, uint32_t code)
     put_le(&d[1], idx, 2);
     d[3] = sub;
     put_le(&d[4], code, 4);
-    send(co, (uint16_t)(CO_ID_SDO_TX + co->node_id), 8, d);
+    (void)send(co, (uint16_t)(CO_ID_SDO_TX + co->node_id), 8, d);
 }
 
 static uint32_t sdo_lookup(const co_node_t *co, uint16_t idx, uint8_t sub, const co_od_entry_t **out)
@@ -270,6 +327,7 @@ static uint32_t sdo_lookup(const co_node_t *co, uint16_t idx, uint8_t sub, const
 static void sdo_server(co_node_t *co, const co_frame_t *f)
 {
     if (f->dlc != 8u) {
+        co->rx_malformed++; /* CiA 301: SDO frames are always 8 bytes */
         return;
     }
     const uint8_t *d = f->data;
@@ -295,7 +353,7 @@ static void sdo_server(co_node_t *co, const co_frame_t *f)
         put_le(&r[1], idx, 2);
         r[3] = sub;
         put_le(&r[4], co_od_get(e), n);
-        send(co, (uint16_t)(CO_ID_SDO_TX + co->node_id), 8, r);
+        (void)send(co, (uint16_t)(CO_ID_SDO_TX + co->node_id), 8, r);
         return;
     }
     if (ccs == 1u) { /* initiate download */
@@ -353,7 +411,7 @@ static void sdo_server(co_node_t *co, const co_frame_t *f)
         r[0] = 0x60;
         put_le(&r[1], idx, 2);
         r[3] = sub;
-        send(co, (uint16_t)(CO_ID_SDO_TX + co->node_id), 8, r);
+        (void)send(co, (uint16_t)(CO_ID_SDO_TX + co->node_id), 8, r);
         return;
     }
     sdo_abort(co, idx, sub, CO_SDO_ABORT_CMD);
@@ -378,8 +436,20 @@ static void rpdo_receive(co_node_t *co, uint8_t k, const co_frame_t *f)
     co_rpdo_t *r = &co->rpdo[k];
     if (f->dlc < r->len) {
         co->rx_pdo_len_errors++;
-        return; /* CiA 301: too short, not processed */
+        /* CiA 301: not processed, EMCY 0x8210 once until a valid RPDO. */
+        if ((co->comm_errors & CO_COMM_ERR_RPDO_LEN) == 0u) {
+            comm_error_set(co, CO_COMM_ERR_RPDO_LEN, CO_EMCY_PDO_LENGTH, (uint8_t)(k + 1u));
+        }
+        return;
     }
+    if (f->dlc > r->len) {
+        /* CiA 301: the first bytes are used; length exceeded is reported
+         * as EMCY 0x8220 (not latched in the error register). */
+        co->rx_pdo_len_excess++;
+        uint8_t mfr[5] = {(uint8_t)(k + 1u), f->dlc, r->len, 0, 0};
+        co_emcy(co, CO_EMCY_PDO_LENGTH_EX, mfr);
+    }
+    comm_error_clear(co, CO_COMM_ERR_RPDO_LEN);
     uint8_t off = 0;
     for (uint8_t i = 0; i < r->cfg.map_len; i++) {
         uint8_t n = co_type_size(r->ent[i]->type);
@@ -409,12 +479,16 @@ static void tpdo_service(co_node_t *co)
                 changed = true;
             }
         }
-        bool due = !t->sent_once || (changed && since >= inhibit_ms) ||
-                   (event_ms != 0u && since >= event_ms);
+        /* CiA 301: the inhibit time is the minimum gap between two
+         * transmissions of this PDO, whatever triggered them. */
+        bool due = !t->sent_once ||
+                   (since >= inhibit_ms && (changed || (event_ms != 0u && since >= event_ms)));
         if (!due) {
             continue;
         }
-        send(co, t->cfg.cob_id, len, buf);
+        if (!send(co, t->cfg.cob_id, len, buf)) {
+            continue; /* not sent: retried on the next step, counter not advanced */
+        }
         memcpy(t->last, buf, sizeof(buf));
         t->sent_once = true;
         t->last_tx_ms = co->now_ms;
@@ -428,7 +502,11 @@ static void tpdo_service(co_node_t *co)
 
 static void nmt_command(co_node_t *co, const co_frame_t *f)
 {
-    if (f->dlc != 2u || (f->data[1] != 0u && f->data[1] != co->node_id)) {
+    if (f->dlc != 2u) {
+        co->rx_malformed++; /* CiA 301: NMT node control is exactly 2 bytes */
+        return;
+    }
+    if (f->data[1] != 0u && f->data[1] != co->node_id) {
         return;
     }
     switch (f->data[0]) {
@@ -448,24 +526,54 @@ static void nmt_command(co_node_t *co, const co_frame_t *f)
         break;
     case CO_NMT_CS_RESET_COMM:
         set_nmt(co, CO_NMT_INITIALISING);
+        /* CiA 301: communication parameters return to their power-on values. */
+        co->hb_producer_ms = co->hb_producer_default;
+        co->hb_consumer_entry = co->hb_consumer_default;
+        if (co->cb.reset_comm != NULL) {
+            co->cb.reset_comm(co->ctx);
+        }
         co_start(co, co->now_ms);
         break;
     default:
+        co->rx_malformed++;
         break;
+    }
+}
+
+static bool valid_nmt_state(uint8_t s)
+{
+    return s == 0x00u || s == (uint8_t)CO_NMT_STOPPED || s == (uint8_t)CO_NMT_OPERATIONAL ||
+           s == (uint8_t)CO_NMT_PRE_OPERATIONAL;
+}
+
+static void hbc_event(co_node_t *co, co_hbc_event_t ev)
+{
+    if (co->cb.hb_consumer != NULL) {
+        co->cb.hb_consumer(co->ctx, (int)ev);
     }
 }
 
 static void hb_consumer_rx(co_node_t *co, const co_frame_t *f)
 {
-    if (co->hbc == CO_HBC_OFF || f->dlc < 1u) {
+    /* CiA 301: a heartbeat is exactly one byte holding an NMT state. Any
+     * other frame on this COB-ID is not a heartbeat and refreshes nothing. */
+    if (f->dlc != 1u || !valid_nmt_state(f->data[0])) {
+        co->rx_malformed++;
         return;
     }
     co->hbc_last_rx_ms = co->now_ms;
     co->hbc_remote_state = f->data[0];
     co_hbc_state_t before = co->hbc;
-    co->hbc = CO_HBC_ACTIVE; /* before the callback, which may read it */
-    if (before == CO_HBC_LOST && co->cb.hb_consumer != NULL) {
-        co->cb.hb_consumer(co->ctx, false);
+    co->hbc = CO_HBC_ACTIVE; /* before the callbacks, which may read it */
+    if (f->data[0] == 0x00u) {
+        co->hbc_remote_boots++;
+        hbc_event(co, CO_HBC_EV_REMOTE_BOOT);
+    }
+    if (before == CO_HBC_LOST) {
+        comm_error_clear(co, CO_COMM_ERR_HB);
+        hbc_event(co, CO_HBC_EV_RECOVERED);
+    } else if (before == CO_HBC_WAITING) {
+        hbc_event(co, CO_HBC_EV_STARTED);
     }
 }
 
@@ -473,6 +581,12 @@ void co_process(co_node_t *co, const co_frame_t *f, uint32_t now_ms)
 {
     co->now_ms = now_ms;
     if (co->nmt == CO_NMT_INITIALISING) {
+        return;
+    }
+    if (f->ext || f->rtr || f->id > 0x7FFu || f->dlc > 8u) {
+        /* 29-bit frames are never CANopen objects here; RTR is not
+         * supported (TPDO COB-IDs have bit 30 set). */
+        co->rx_malformed++;
         return;
     }
     if (f->id == CO_ID_NMT) {
@@ -509,16 +623,17 @@ void co_step(co_node_t *co, uint32_t now_ms)
     }
     if (co->hb_producer_ms != 0u && (uint32_t)(now_ms - co->last_hb_tx_ms) >= co->hb_producer_ms) {
         uint8_t s = (uint8_t)co->nmt;
-        send(co, (uint16_t)(CO_ID_HEARTBEAT + co->node_id), 1, &s);
-        co->last_hb_tx_ms = now_ms;
+        if (send(co, (uint16_t)(CO_ID_HEARTBEAT + co->node_id), 1, &s)) {
+            co->last_hb_tx_ms = now_ms;
+        }
     }
     if (co->hbc == CO_HBC_ACTIVE) {
         uint16_t t = (uint16_t)co->hb_consumer_entry;
         if ((uint32_t)(now_ms - co->hbc_last_rx_ms) > t) {
             co->hbc = CO_HBC_LOST;
-            if (co->cb.hb_consumer != NULL) {
-                co->cb.hb_consumer(co->ctx, true);
-            }
+            comm_error_set(co, CO_COMM_ERR_HB, CO_EMCY_HEARTBEAT,
+                           (uint8_t)(co->hb_consumer_entry >> 16));
+            hbc_event(co, CO_HBC_EV_TIMEOUT);
         }
     }
     if (co->nmt == CO_NMT_OPERATIONAL) {
@@ -545,5 +660,5 @@ void co_emcy(co_node_t *co, uint16_t code, const uint8_t mfr[5])
     put_le(&d[0], code, 2);
     d[2] = co->error_register;
     memcpy(&d[3], mfr, 5);
-    send(co, (uint16_t)(CO_ID_EMCY + co->node_id), 8, d);
+    (void)send(co, (uint16_t)(CO_ID_EMCY + co->node_id), 8, d);
 }
