@@ -15,3 +15,6 @@ endfunction()
 
 ctl017_test(test_canopen)
 ctl017_test(test_co_robust)
+if(CTL017_PERMIT_OD)
+  ctl017_test(test_permit)
+endif()

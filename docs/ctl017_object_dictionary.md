@@ -4,6 +4,8 @@ Status: proposal for the CTL-017 owner (Evans) to adopt, adapt or reject. Nothin
 
 Sources: the CAN3 lift message set (openamr-platform-fw #12: proposal of 23 Oct 2026, decisions D1 to D20 of 24 Oct, accepted 25 Oct, and the changes of 27 Oct) and P-03 item 29 and item 30 A7 (CTL-017 board and scope, decision D-11). CAN3 carries no safety function. The hardwired PNOZ chain removes lift motor power independently of this interface.
 
+Layering (this branch): the CANopen layer (`firmware/ctl017/canopen`) and the application layer (`firmware/ctl017/app`) put the wire objects in and out. Everything this document says about lift behaviour (when a command is accepted or refused, cmd_result codes, F07 supervision, what happens on heartbeat loss, the meaning of the RPDO1 deadline) is the lift owner's code, which reads the plain data records of `firmware/ctl017/iface/include/ctl017/lift_iface.h`. The application layer never interprets a command and never decides anything about motion. Values below that say "TODO(Evans)" are integration parameters with no default in the firmware: with any of them unset the node stays silent.
+
 ## 1. Bus and identifiers
 
 | Item | Value | Source |
@@ -30,14 +32,15 @@ Sources: the CAN3 lift message set (openamr-platform-fw #12: proposal of 23 Oct 
 
 - Boot: CTL-017 sends the boot-up message (0x710, data 0x00) and enters PRE-OPERATIONAL. PDOs run only in OPERATIONAL; the base controller starts the node with NMT start (0x01). SDO is served in PRE-OPERATIONAL and OPERATIONAL, not in STOPPED.
 - Leaving OPERATIONAL (NMT stop or pre-operational) halts the lift at once: no RPDO can arrive any more.
-- NMT reset node (0x81) halts the lift and requests a system reset from the board port. Reset communication (0x82) re-sends the boot-up message and returns to PRE-OPERATIONAL.
-- Heartbeat producer 0x1017 = 100 ms. Heartbeat consumer 0x1016:01 = node 0x01, 300 ms (D15). Monitoring starts with the first heartbeat received. Until then, and while the heartbeat is timed out or the consumer is disabled, the core heartbeat counts as stale: MOVE_TO_STOP and START_HOMING are refused with cmd_result 12 (D12 alternative a).
+- NMT reset node (0x81) halts the lift and requests a system reset from the board port (the application layer sets `reset_node_requested`). Reset communication (0x82) restores the power-on values of 0x1016:01, 0x1017, 0x1400:05 and the TPDO inhibit and event times, re-sends the boot-up message and returns to PRE-OPERATIONAL. Every NMT transition starts a new epoch in the link record; command records received before it are marked not valid.
+- NMT node control frames must be exactly 2 bytes; RTR frames, 29-bit frames and frames with DLC above 8 are never processed.
+- Heartbeat producer 0x1017 = 100 ms (proposal, TODO(Evans)). Heartbeat consumer 0x1016:01 = node 0x01, 300 ms (D15, TODO(Evans) to confirm). The CANopen layer reports the consumer state and its events (first heartbeat, timeout, recovery, boot-up of the base controller) in the link record and raises EMCY 0x8130 with error register bit 4 on timeout, error reset 0x0000 on recovery. A heartbeat must be exactly one byte with a valid NMT state; anything else on 0x701 is dropped and does not refresh the consumer. Lift owner's rule: Monitoring starts with the first heartbeat received. Until then, and while the heartbeat is timed out or the consumer is disabled, the core heartbeat counts as stale: MOVE_TO_STOP and START_HOMING are refused with cmd_result 12 (D12 alternative a).
 - Command supervision (D12 alternative a): while a move or homing is active, the lift stops and raises F07 if either the command keep-alive or the core heartbeat is missing for 300 ms. The keep-alive is RPDO1 re-sent every 100 ms with the same seq and identical content (S2 section 11). The deadline is 0x1400:05 (RPDO1 event timer, CiA 301 deadline monitoring); it is armed only while a move or homing is active, so an idle base controller does not need to send RPDO1.
 - The base controller watches the CTL-017 heartbeat (node lost after 300 ms) and the TPDO1 status_counter (gap limit 3, resync after 3 frames, D15). Those rules run on the base controller and are listed here for completeness.
 
 ## 3. TPDO1 LiftStatus (0x190, 8 bytes)
 
-Event driven (transmission type 0xFE): sent on any change of bytes 0 to 6, at most every inhibit time 0x1800:03 (default 10 ms, TODO(Evans)), and at least every event time 0x1800:05 (100 ms). Little-endian.
+Event driven (transmission type 0xFE): sent on any change of bytes 0 to 6, at most every inhibit time 0x1800:03 (proposal 10 ms, TODO(Evans)), and at least every event time 0x1800:05 (proposal 100 ms, TODO(Evans)). The inhibit time bounds every transmission of the PDO, event-timer ones included. Little-endian.
 
 | Byte | Field | Object | Meaning |
 |---|---|---|---|
@@ -66,7 +69,7 @@ The CTL-017 v1 task names the states IDLE, MOVING_UP, MOVING_DOWN, AT_STOP, FAUL
 
 ## 4. TPDO2 LiftStatus2 (0x290, 8 bytes)
 
-P-03 item 24 and the CAN3 v1 decision put the stop sensor states, motor current and target stop in TPDO2. Layout proposal (TODO(Evans) to confirm). Sent on change of bytes 0, 1, 6 or 7 (inhibit 0x1801:03, default 10 ms) and every 0x1801:05 (default 100 ms); current and velocity go out with the event timer only.
+P-03 item 24 and the CAN3 v1 decision put the stop sensor states, motor current and target stop in TPDO2. Layout proposal (TODO(Evans) to confirm). Sent on change of bytes 0, 1, 6 or 7 (inhibit 0x1801:03, proposal 10 ms) and every 0x1801:05 (proposal 100 ms), TODO(Evans); current and velocity go out with the event timer only.
 
 | Byte | Field | Object | Meaning |
 |---|---|---|---|
@@ -155,9 +158,11 @@ Error register 0x1001: bit 0 generic (any fault), bit 1 current (F03), bit 4 com
 
 ## 8. SDO
 
-Expedited transfers only (up to 4 bytes). Segmented and block transfers are answered with abort 0x06010000. Abort codes used: 0x05040001 command specifier, 0x06010000 unsupported access, 0x06010002 read only, 0x06020000 object does not exist, 0x06070010 length mismatch, 0x06090011 sub-index does not exist, 0x06090030 value range, 0x08000021 local control (0x2010), 0x08000022 device state (parameter write outside PRE-OPERATIONAL or during motion).
+SDO requests must be 8 bytes; shorter frames are dropped. Expedited transfers only (up to 4 bytes). Segmented and block transfers are answered with abort 0x06010000. Abort codes used: 0x05040001 command specifier, 0x06010000 unsupported access, 0x06010002 read only, 0x06020000 object does not exist, 0x06070010 length mismatch, 0x06090011 sub-index does not exist, 0x06090030 value range, 0x06040043 general parameter incompatibility (0x1016:01 naming the node itself), 0x08000021 local control (0x2010), 0x08000022 device state (parameter write outside PRE-OPERATIONAL, or no lift parameter validator registered).
 
-The lift parameters (0x2100, 0x2101, 0x1400:05) are writable in PRE-OPERATIONAL only and never during motion; a write that makes the configuration inconsistent is refused and reverted. They are volatile: compiled-in defaults return at every reset (no 0x1010 store in v1).
+RPDO length (CiA 301): a frame shorter than the mapping is not processed, counted in 0x2300:03 and reported once with EMCY 0x8210 (error register bit 4) until a valid RPDO arrives; a frame longer than the mapping is processed with its first bytes and reported with EMCY 0x8220.
+
+The lift parameters (0x2100, 0x2101) are writable in PRE-OPERATIONAL only. The application layer stores them; the lift owner's validator (registered with `ctl017_app_set_params_validator`) decides whether a set is consistent, and a refused write is reverted. Without a validator every write is refused. They are volatile and start at 0 ("not set") at every reset: there are no compiled-in defaults (no 0x1010 store in v1). 0x1400:05 is stored and exposed to the lift owner; this layer does not supervise it.
 
 ## 9. What this proposal adds or changes against the S2 text
 
@@ -166,7 +171,8 @@ The lift parameters (0x2100, 0x2101, 0x1400:05) are writable in PRE-OPERATIONAL 
 3. EMCY codes 0xFF0n and the 0x1003 entry format.
 4. RPDO1 deadline armed only during motion (keeps an idle bus quiet).
 5. Product code 0x00000011 (17, for CTL-017) and vendor ID 0: there is no CiA vendor ID for the project, TODO(Evans).
-6. Own CANopen implementation instead of CANopenNode (D1 names CANopenNode): see docs/ctl017_firmware.md section 4.
+6. Own CANopen implementation instead of CANopenNode (D1 names CANopenNode): see docs/ctl017_canopen_stack_decision.md.
+7. Optional permit object (RPDO3), off by default: docs/ctl017_permit_contract.md.
 
 ## 10. Object table (generated)
 

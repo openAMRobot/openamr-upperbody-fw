@@ -57,7 +57,7 @@ static inline ctl017_app_config_t test_config(void)
     c.product_code = 0x11;
     c.revision = 0x00010000u;
 #ifdef CTL017_PERMIT_OD
-    c.permit_event_timer_ms = 500;
+    c.permit_event_timer_ms = 500; /* test value, not a proposal */
 #endif
     return c;
 }
