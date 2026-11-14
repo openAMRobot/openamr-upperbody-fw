@@ -267,6 +267,70 @@ static void test_random_sdo(void)
     }
 }
 
+
+/* R13: frames from the wrong node. Heartbeat of another node does not feed
+ * the consumer; NMT for another node, RPDO and SDO of node 0x11 are not
+ * ours. */
+static void test_wrong_node(void)
+{
+    setup();
+    uint8_t s = 0x05;
+    rx(&F, ID_HB_BASE, 1, &s);
+    for (int i = 0; i < 50; i++) {
+        run(&F, 10);
+        rx(&F, (uint16_t)(0x700u + 0x02u), 1, &s);
+    }
+    CHECK_EQ(F.app.co.hbc, CO_HBC_LOST);
+    nmt(&F, CO_NMT_CS_START);
+    uint8_t c[3] = {1, CTL017_OP_MOVE_TO_STOP, 1};
+    rx(&F, (uint16_t)(0x200u + 0x11u), 3, c);
+    CHECK_EQ(ctl017_app_rx_view(&F.app)->lift_cmd.rx_count, 0);
+    uint8_t q[8] = {0x40, 0x18, 0x10, 2, 0, 0, 0, 0};
+    F.ntx = 0;
+    rx(&F, (uint16_t)(0x600u + 0x11u), 8, q);
+    CHECK_EQ(F.ntx, 0);
+}
+
+/* R14: delayed and out-of-order commands are passed through with their own
+ * receive time; the layer neither reorders nor drops them. */
+static void test_delayed_and_out_of_order(void)
+{
+    setup();
+    go_operational(&F);
+    lift_cmd(&F, 5, CTL017_OP_MOVE_TO_STOP, 2);
+    run(&F, 2000); /* long gap: no timer here, nothing happens */
+    CHECK(ctl017_app_rx_view(&F.app)->lift_cmd.valid);
+    lift_cmd(&F, 3, CTL017_OP_MOVE_TO_STOP, 0); /* older seq after newer */
+    run(&F, 1);
+    lift_cmd(&F, 4, CTL017_OP_STOP, 0);
+    CHECK_EQ(F.dbl.n_log, 3);
+    CHECK_EQ(F.dbl.log[0].seq, 5);
+    CHECK_EQ(F.dbl.log[1].seq, 3);
+    CHECK_EQ(F.dbl.log[2].seq, 4);
+    CHECK_EQ(F.dbl.log[1].rx_ms - F.dbl.log[0].rx_ms, 2000);
+    CHECK_EQ(F.dbl.log[2].rx_ms - F.dbl.log[1].rx_ms, 1);
+}
+
+/* R15: frames around an NMT reset communication. While INITIALISING
+ * nothing is processed; a command sent right after the reset (PRE-OP) is
+ * ignored; the record from before the reset is no longer valid. */
+static void test_frames_across_reset(void)
+{
+    setup();
+    go_operational(&F);
+    lift_cmd(&F, 1, CTL017_OP_MOVE_TO_STOP, 1);
+    nmt(&F, CO_NMT_CS_RESET_COMM);
+    lift_cmd(&F, 2, CTL017_OP_MOVE_TO_STOP, 2);
+    const ctl017_iface_rx_t *v = ctl017_app_rx_view(&F.app);
+    CHECK(!v->lift_cmd.valid);
+    CHECK_EQ(v->lift_cmd.rx_count, 1);
+    CHECK_EQ(F.app.co.hbc, CO_HBC_WAITING); /* consumer restarted */
+    nmt(&F, CO_NMT_CS_START);
+    lift_cmd(&F, 3, CTL017_OP_STOP, 0);
+    CHECK(v->lift_cmd.valid);
+    CHECK_EQ(v->lift_cmd.seq, 3);
+}
+
 int main(void)
 {
     RUN(test_rtr_and_extended_dropped);
@@ -281,5 +345,8 @@ int main(void)
     RUN(test_inhibit_applies_to_event_timer);
     RUN(test_random_frames);
     RUN(test_random_sdo);
+    RUN(test_wrong_node);
+    RUN(test_delayed_and_out_of_order);
+    RUN(test_frames_across_reset);
     TEST_MAIN_END();
 }

@@ -16,6 +16,8 @@ Scope: the CANopen slave, application layer and tooling taken from the draft of 
 | R10 | The return value of the send callback was ignored. A refused TPDO advanced the status counter and timer, so the frame was lost until the next change. The heartbeat was the same. | Not CiA 301 itself, but a gap the base controller's counter monitor would report as lost frames. | TPDO and heartbeat state advance only on a successful send. Otherwise they retry on the next step and `tx_failures` is counted. | `test_tpdo_send_failure_retried`, `test_heartbeat_retry_after_send_failure` |
 | R11 | 0x1016:01 accepted the node's own ID. | A node cannot consume its own heartbeat. | Abort 0x06040043. | `test_sdo_aborts` |
 
+Additional robustness tests (no code change needed): frames from the wrong node (`test_wrong_node`), delayed and out-of-order commands passed through with their own receive time (`test_delayed_and_out_of_order`), frames across an NMT reset communication (`test_frames_across_reset`), and random frame and SDO storms (`test_random_frames`, `test_random_sdo`).
+
 Design findings outside CiA 301, resolved by the interface cut:
 
 | # | Finding | Resolution |
