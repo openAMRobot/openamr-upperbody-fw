@@ -37,6 +37,14 @@ Recorded in [issue #9](https://github.com/openAMRobot/openamr-upperbody-fw/issue
 - The E-stop safe-park procedure includes the lift retracted.
 - Lift motion only with the base stopped and the arms in the stowed or carry safe pose.
 
+## CTL-017 CANopen layer (proposal, draft branch)
+Agent-written proposal for the CTL-017 owner. No lift control is implemented here.
+- `firmware/ctl017/canopen`: CANopen slave (NMT, heartbeat, expedited SDO, PDO, EMCY). `firmware/ctl017/app`: the object dictionary of `docs/ctl017_object_dictionary.md`. `firmware/ctl017/iface`: plain data records between the app layer and the lift owner's code. The app layer never interprets a command or decides anything about motion.
+- Every timing and identity value is an integration parameter with no default (TODO(Evans)). With an incomplete config the node stays silent.
+- Build and test on the host (ASan and UBSan on): `cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure`. `vcan_pytest` is reported as skipped when no vcan interface exists (`tools/ctl017_sim/setup_vcan.sh`).
+- Cortex-M4 object libraries: `cmake -S . -B build-m4 -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake && cmake --build build-m4`.
+- Documents: object dictionary and EDS (generated), `docs/ctl017_canopen_review.md`, `docs/ctl017_permit_contract.md` (optional permit object, off by default), `docs/ctl017_canopen_stack_decision.md` (D1), `docs/ctl017_emulator_alignment.md`.
+
 Part of the OpenAMRobot ecosystem: https://github.com/openAMRobot
 
 ## Ownership, licensing, and contributions
